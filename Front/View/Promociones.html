@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <title>Proveedores</title>
+    <link rel="stylesheet" href="/Public/Css/Usuarios.css">
+</head>
+<body>
+    <script src="/Public/Js/toolbar.jsx"></script>
+    <header>
+        <nav class="custom-navbar">
+            <ul class="nav-list">
+                <li class="nav-item"><a href="/View/Usuarios">Usuarios</a></li>
+                <li class="nav-item active"><a href="/View/Proveedores">Proveedores</a></li>
+                <li class="nav-item"><a href="/View/Ventas">Ventas</a></li>
+                <li class="nav-item"><a href="/View/Inventario">Inventario</a></li>
+                <li class="nav-item"><a href="/View/Promociones">Promociones</a></li>  
+                <li class="nav-item"><a href="/View/Clientes">Clientes</a></li>  
+                <li class="nav-item"><a href="/View/Metricas">Métricas</a></li>  
+            </ul>
+        </nav>
+    </header>
+
+    <div class="Main-Container">
+        <div class="Table-Wrapper">
+            <table class="table table-bordered Custom-Table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Periodo</th>
+                        <th>Descuento</th>
+                        <th>Productos</th>
+                        <th>Acciones</th> </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Navidad</td> 
+                        <td>3 meses</td>
+                        <td>20%</td>
+                        <td>Frutas </td>
+                        <td class="Action-Buttons">
+                            <button class="btn btn-secondary">Repetir</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="Action-Buttons">
+                            <button class="btn btn-secondary">Repetir</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="Action-Buttons">
+                            <button class="btn btn-secondary">Repetir</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="Action-Buttons">
+                            <button class="btn btn-secondary">Repetir</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<div class="modal fade" id="AddModal" tabindex="-1" aria-labelledby="AddModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content Custom-Modal-Style"> 
+            <div class="modal-body">
+                <h2 class="text-center mb-4">Agregar Proveedor</h2>
+                
+                <form>
+                    <div class="row">
+                        
+                        <div> </div>
+                        //* Descripcion, Clientes con acceso, Porcentaje de descuento.
+                        <div>
+
+                            <div class="col-6">
+                                <label for="description">Descripcion</label>
+                                <input type="text" id="description">
+                            </div>
+                            <div class="row col-6"> 
+                                <div class="col-6">
+                                    <label for="description">Clientes con acceso</label>
+                                    <select name="" id="">
+                                        <option selected>Seleccionar...</option>
+                                        <option value="1">Todos</option>
+                                        <option value="2">Clientes </option>
+                                        <option value="3">Clientes Especificos</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label for="description">Porcentaje de descuento</label>
+                                    <input type="number" id="description">
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="description">Fecha de inicio</label>
+                                <input type="date" id="description">
+                            </div>
+                            <div class="col-6">
+                                <label for="product">Productos</label>
+                                <select name="" id="">
+                                    <option selected>Seleccionar...</option>
+                                    <option value="1">Fruta</option>
+                                    <option value="2">Verdura</option>
+                                    <option value="3">Carne</option>
+                                    <option value="4">Pescado</option>
+                                    <option value="5">Lacteos</option>
+                                    <option value="6">Granos</option>
+                                    <option value="7">Bebidas</option>
+                                    <option value="8">Snacks</option>
+                                    <option value="9">Otros</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Agregar a Promociones</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
