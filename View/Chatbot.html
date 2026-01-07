@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <title>Usuarios</title>
+    <title>ChatBot</title>
     <link rel="stylesheet" href="/Public/Css/Usuarios.css">
 </head>
 <body>
@@ -24,8 +24,8 @@
         </nav>
         
         <div class="sub-header">
-            <label class="sub-title active-sub "><a class="Small-List" href="/View/Usuarios">Usuarios</a></label>
-            <label class="sub-title "><a class="Small-List" href="/View/ChatBot">ChatBot</a></label>
+            <label class="sub-title "><a class="Small-List" href="/View/Usuarios">Usuarios</a></label>
+            <label class="sub-title active-sub"><a class="Small-List" href="/View/ChatBot">ChatBot</a></label>
         </div>
     </header>
 
@@ -44,14 +44,20 @@
                     <tr>
                         <th>Nombre Completo</th>
                         <th>Telefono</th>
-                        <th>Dirección</th>
-                        <th>Nivel de <br>Usuario</th> <th style="width: 200px;"> </th> </tr>
+                        <th style="width: 200px;"> </th> </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Juan Pérez</td> <td>555-1234</td>
-                        <td>Calle Falsa 123</td>
-                        <td>Admin</td>
+                        <td>Juan Pérez</td>
+                        <td>33122298</td>
+                        <td class="Action-Buttons">
+                            <button class="button_edit"><i class="bi bi-pencil-square"></i></button>
+                            <button class="button_delete"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>María López</td>
+                        <td>555-5678</td>
                         <td class="Action-Buttons">
                             <button class="button_edit"><i class="bi bi-pencil-square"></i></button>
                             <button class="button_delete"><i class="bi bi-trash"></i></button>
@@ -60,26 +66,12 @@
                     <tr>
                         <td></td>
                         <td></td>
-                        <td></td>
-                        <td></td>
                         <td class="Action-Buttons">
                             <button class="button_edit"><i class="bi bi-pencil-square"></i></button>
                             <button class="button_delete"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>
                     <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td class="Action-Buttons">
-                            <button class="button_edit"><i class="bi bi-pencil-square"></i></button>
-                            <button class="button_delete"><i class="bi bi-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td></td>
                         <td></td>
                         <td></td>
                         <td class="Action-Buttons">
@@ -99,38 +91,24 @@
                 <h2 class="text-center mb-4">Agregar Usuario</h2>
                 
                 <form>
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Nombre Completo</label>
-                        <input type="text" class="form-control" id="name" placeholder="Ej. Juan Pérez">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Correo Electrónico</label>
-                        <input type="email" class="form-control" id="email" placeholder="correo@ejemplo.com">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="address" class="form-label">Dirección</label>
-                        <input type="text" class="form-control" id="address">
-                    </div>
-
                     <div class="row mb-4">
-                        <div class="col-6">
-                            <label class="form-label">Nivel de Usuario</label>
+                        <div class="">
+                            <label class="form-label">Nombre del empleado</label>
                             <select class="form-select">
                                 <option selected>Seleccionar...</option>
-                                <option value="1">Dueño</option>
-                                <option value="2">Administrador</option>
-                                <option value="3">Empleado</option>
+                                <option value="1">Ernesto Perez</option>
+                                <option value="2">Oscar Sanchez</option>
+                                <option value="3">Juan Perez</option>
                             </select>
                         </div>
-                        <div class="col-6">
-                            <label for="phone" class="form-label">Teléfono</label>
-                            <input type="number" class="form-control" id="phone">
-                        </div>
+
                     </div>
                     <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+                        <label class="form-label">Telefono vinculado</label>
+                        <input type="number" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">Agregar a ChatBot</button>
                     </div>
                 </form>
             </div>
