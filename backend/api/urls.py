@@ -19,6 +19,10 @@ from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    #path('api/users/<int:pk>/', ,name="users_detail"),
-    
+    #Faltan los middleware y la programacion de las funciones
+    #path('api/user/<int:pk>/', ,name="user_detail"),
+    #path('api/customer/<int:pk>/', ,name="customer_details"),
+    #path('api/supplier/<int:pk>/', ,name="supplier_details"),
+    #path('api/product/<int:pk>/', ,name="product_detail"),
+    #path('api/promotion/<int:pk>/', ,name="promotion_detail"),
 ]

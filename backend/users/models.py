@@ -24,7 +24,7 @@ class User(models.Model):
         return self.username
 
     def get_absolute_url(self):
-        return reverse("users_detail", kwargs={"pk": self.pk})
+        return reverse("user_detail", kwargs={"pk": self.pk})
 
 def get_expiration_date():
     return timezone.now() + timedelta(days=1)
