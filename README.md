@@ -23,7 +23,7 @@ Authenticates a user and establishes a session record. The system automatically 
 **Request Body:**
 ```json
 {
-  "username": "admin_user",
+  "email": "admin@enterprise.com",
   "password": "secure_password"
 }
 ```
