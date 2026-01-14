@@ -26,91 +26,68 @@ Authenticates a user and establishes a session record. The system automatically 
   "username": "admin_user",
   "password": "secure_password"
 }
-
+```
 Response (200 OK):
+
 Note: The access token payload contains user_id, email, username, and role.
 
-code
-JSON
-download
-content_copy
-expand_less
+```json
 {
   "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
   "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 }
-2. Refresh Token
+```
+### 2. Refresh Token
 
-Obtains a new access token using a valid refresh token.
+Obtains a new `access token` using a valid `refresh token`.
 
-Endpoint: /auth/refresh/
+*  **Endpoint:** `/auth/refresh/`
 
-Method: POST
+*  **Method:** `POST`
 
-Access: Public
+* **Access:** Public
 
 Request Body:
 
-code
-JSON
-download
-content_copy
-expand_less
+```json
 {
   "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 }
-User Management
-3. Get Current User Profile
+```
+## User Management
 
-Retrieves the profile information of the currently authenticated user.
+> **Security Notice:** Direct access to user management endpoints (Listing, Creating, Deleting) is strictly restricted to users with `ADMIN` or `OWNER` roles. `EMPLOYEE` accounts can only access the `/users/me/` endpoint.
 
-Endpoint: /users/me/
+### 3. Get Current User Profile
+Retrieves the profile information of the currently authenticated user. This is the **only** user endpoint accessible to Employees.
 
-Method: GET
+*   **Endpoint:** `/users/me/`
+*   **Method:** `GET`
+*   **Access:** Authenticated (All Roles)
 
-Access: Authenticated
-
-Response (200 OK):
-
-code
-JSON
-download
-content_copy
-expand_less
+**Response (200 OK):**
+```json
 {
   "id": 1,
-  "username": "admin_user",
-  "first_name": "Roberto",
-  "last_name": "Gómez",
-  "email": "roberto@enterprise.com",
-  "phone_number": "555-0199",
-  "address": "Main St 123",
-  "role": "ADMIN",
-  "is_active": true
+  "username": "employee_juan",
+  "role": "EMPLOYEE",
+  ...
 }
-4. Create User (Registration)
-
+```
+### 4. Create User (Registro)
 Registers a new user in the system.
 
-Endpoint: /users/
+*   **Endpoint:** `/users/`
+*   **Method:** `POST`
+*   **Access:** **Restricted** (Requires `ADMIN` or `OWNER` role)
 
-Method: POST
+**Constraints:**
+*   `username`: Unique.
+*   `email`: Unique.
+*   `role`: Must be one of `ADMIN`, `OWNER`.
 
-Access: Public / Admin (Depending on permission settings)
-
-Constraints:
-
-email: Unique.
-
-role: Must be one of ADMIN, EMPLOYEE, OWNER.
-
-Request Body:
-
-code
-JSON
-download
-content_copy
-expand_less
+**Request Body:**
+```json
 {
   "username": "employee_01",
   "email": "employee@enterprise.com",
@@ -119,60 +96,53 @@ expand_less
   "last_name": "Mendez",
   "phone_number": "555-9876",
   "address": "Second Ave 45",
-  "role": "EMPLOYEE"
+  "role": "ADMIN"
 }
-5. Update User Profile
+```
+### 5. Update User Profile
 
 Updates details of the currently authenticated user.
 
-Endpoint: /users/me/
+* **Endpoint:** `/users/me/`
 
-Method: PUT or PATCH
+* **Method:** `PUT` or `PATCH`
 
-Access: Authenticated
+* **Access:** Authenticated
 
 Request Body:
-
-code
-JSON
-download
-content_copy
-expand_less
+```json
 {
   "first_name": "Laura Elena",
   "phone_number": "555-0000"
 }
-6. Delete User (Soft Delete)
+```
+
+### 6. Delete User (Soft Delete)
 
 Performs a logical deletion of the user. The record is preserved in the database but is_active is set to false.
 
-Endpoint: /users/{id}/
+* **Endpoint:** `/users/{id}/`
 
-Method: DELETE
+* **Method:** `DELETE`
 
-Access: Admin / Authenticated
+* **Access:** `Admin` / `Authenticated`
 
-Response: 204 No Content
+* **Response:** 204 No Content
 
-Session Management & Security
-7. List Active Sessions
+## Session Management & Security
+### 7. List Active Sessions
 
 Retrieves a list of all active sessions (refresh tokens) associated with the current user. Useful for displaying connected devices (e.g., "Chatbot", "Chrome on Windows").
 
-Endpoint: /sessions/
+* **Endpoint:** `/sessions/`
 
-Method: GET
+* **Method:** `GET`
 
-Access: Authenticated
+* **Access:** Authenticated
 
-Response (200 OK):
+* **Response (200 OK):**
 
-code
-JSON
-download
-content_copy
-expand_less
-[
+```json
   {
     "id": 10,
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
@@ -181,48 +151,47 @@ expand_less
     "expires_at": "2023-11-03T10:00:00Z",
     "is_revoked": false
   }
-]
-8. Revoke Session
+```
+
+### 8. Revoke Session
 
 Forces a logout for a specific device by revoking its refresh token.
 
-Endpoint: /sessions/{id}/revoke/
+* **Endpoint:** `/sessions/{id}/revoke/`
 
-Method: POST
+* **Method:** `POST`
 
-Access: Authenticated (Owner of the session)
+* **Access:** Authenticated (`Owner` of the session)
 
-Response (200 OK):
+* **Response (200 OK):**
 
-code
-JSON
-download
-content_copy
-expand_less
+```json
 {
   "status": "Sesión cerrada correctamente"
 }
-Data Definitions
-User Roles
+```
+## Data Definitions
+### User Roles
 
 The role field accepts the following enumerated string values:
 
-Value	Description
-ADMIN	System Administrator with full access.
-EMPLOYEE	Standard user with access to POS functions.
-OWNER	Business owner access level.
-HTTP Status Codes
+| Value        |Description                                     |
+|--------------|------------                                    |
+| ADMINS       |System `Administrator` with full access.        |
+| EMPLOYEE	   |Standard user with access to `POS` functions.   |
+| OWNER	       |Business owner access level.                    |
 
-200 OK - Request succeeded.
+## HTTP Status Codes 
+* 200 OK - Request succeeded.
 
-201 Created - Resource successfully created.
+* 201 Created - Resource successfully created.
 
-204 No Content - Action succeeded (typically Delete) with no response body.
+* 204 No Content - Action succeeded (typically Delete) with no response body.
 
-400 Bad Request - Invalid input data (e.g., duplicate email).
+* 400 Bad Request - Invalid input data (e.g., duplicate email).
 
-401 Unauthorized - Invalid or expired token.
+* 401 Unauthorized - Invalid or expired token.
 
-403 Forbidden - User lacks permission for this resource.
+* 403 Forbidden - User lacks permission for this resource.
 
-404 Not Found - Resource does not exist.
+* 404 Not Found - Resource does not exist.
