@@ -8,6 +8,9 @@ class Supplier(models.Model):
     rfc = models.CharField(max_length=40)
     tax_address = models.CharField(250)
 
+    class Meta:
+        db_table = 'SUPPLIERS'
+
     def get_absolute_url(self):
         return reverse("supplier_detail", kwargs={"pk": self.pk})
     

@@ -9,6 +9,9 @@ class Customer(models.Model):
     birth_date = models.DateField()
     is_frequent = models.BooleanField(default=False)
 
+    class Meta:
+        db_table = 'CUSTOMERS'
+
     def get_absolute_url(self):
         return reverse("customer_detail", kwargs={"pk": self.pk})
     

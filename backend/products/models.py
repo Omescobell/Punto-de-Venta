@@ -15,6 +15,9 @@ class Product(models.Model):
         related_name="products"
     )
 
+    class Meta:
+        db_table = 'PRODUCTS'
+
     def get_absolute_url(self):
         return reverse("product_detail", kwargs={"pk": self.pk})
     
@@ -38,6 +41,9 @@ class Promotion(models.Model):
         on_delete=models.CASCADE,
         related_name="promotions")
     
+    class Meta:
+        db_table = 'PROMOTIONS  '
+
     def get_absolute_url(self):
         return reverse("promotion_detail", kwargs={"pk": self.pk})
     

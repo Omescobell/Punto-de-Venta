@@ -31,6 +31,9 @@ class Order(models.Model):
         related_name="sales"
     )
 
+    class Meta:
+        db_table = 'ORDERS'
+
     def get_absolute_url(self):
         return reverse("order_detail", kwargs={"pk": self.pk})
     
@@ -56,5 +59,7 @@ class OrderItems(models.Model):
                                 on_delete=models.SET_NULL,
                                 null=True,
                                 related_name="applied_in_orders")
+    class Meta:
+        db_table = 'ORDER_ITEMS'
     def __str__(self):
         return f"{self.quantity} x {self.product_name}"
