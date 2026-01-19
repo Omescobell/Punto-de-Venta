@@ -56,7 +56,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = 'USERS'
 
     def __str__(self):
-        return self.emai
+        return self.email
 
     def get_absolute_url(self):
         return reverse("user_detail", kwargs={"pk": self.pk})

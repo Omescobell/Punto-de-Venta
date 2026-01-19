@@ -6,7 +6,7 @@ class Supplier(models.Model):
     mobile_number = models.CharField(max_length=20)
     contact_person = models.CharField(max_length=40)
     rfc = models.CharField(max_length=40)
-    tax_address = models.CharField(250)
+    tax_address = models.CharField(max_length=250)
 
     class Meta:
         db_table = 'SUPPLIERS'

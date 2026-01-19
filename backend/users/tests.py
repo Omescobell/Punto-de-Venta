@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from rest_framework import status
 from .models import RefreshToken
@@ -47,9 +48,11 @@ class AuthAndUserTests(APITestCase):
         """
         Prueba que el empleado vea su perfil CON todos los campos
         """
+        
         self.authenticate(self.employee_user)
         
         response = self.client.get(self.users_me_url)
+        
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
