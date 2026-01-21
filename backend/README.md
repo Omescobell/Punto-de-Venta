@@ -61,9 +61,19 @@ Request Body:
 ### 3. Get Current User Profile
 Retrieves the profile information of the currently authenticated user. This is the **only** user endpoint accessible to Employees.
 
+**General Security Notes**
+Field Visibility & Security:
+
+       `Password`: Defined as `write_only`. It is required when creating a user but will never       appear in the API responses for security reasons.
+
+       `Is Active`: Defined as `read_only`. This field is managed automatically by the system (e.g., via Soft Delete) and cannot be modified directly via PUT/PATCH.
+
 *   **Endpoint:** `/users/me/`
 *   **Method:** `GET`
 *   **Access:** Authenticated (All Roles)
+
+Description:
+Retrieves a list of all active users in the system. Users marked as "inactive" (soft deleted) are excluded from this list.
 
 **Response (200 OK):**
 ```json
@@ -81,17 +91,26 @@ Registers a new user in the system.
 *   **Method:** `POST`
 *   **Access:** **Restricted** (Requires `ADMIN` or `OWNER` role)
 
-**Constraints:**
-*   `username`: Unique.
-*   `email`: Unique.
-*   `role`: Must be one of `ADMIN`, `OWNER`.
+**Field Constraints:**
+
+*   `email`: **Required & Unique.** Used as the login identifier.
+
+*   `username`: **Required.**
+
+*   `first_name`, `last_name`: **Required.**
+
+*   `phone_number`: **Optional.** Accepts empty strings.
+
+*   `address:` **Optional.** Accepts empty strings.
+
+*   `role`: **Defaults** to `EMPLOYEE` if omitted.
 
 **Request Body:**
 ```json
 {
   "username": "employee_01",
   "email": "employee@enterprise.com",
-  "password": "password123",
+  "password": "password123",    // Write Only (Input)
   "first_name": "Laura",
   "last_name": "Mendez",
   "phone_number": "555-9876",
@@ -99,6 +118,59 @@ Registers a new user in the system.
   "role": "ADMIN"
 }
 ```
+
+**Request Body (Minimal Example - Optional fields omitted):**
+
+```json
+{
+  "username": "cajero_juan",
+  "email": "juan@enterprise.com",
+  "password": "securePass123",
+  "first_name": "Juan",
+  "last_name": "Lopez"
+  // phone_number and address are optional (blank=True)
+}
+```
+**Response (201 Created):**
+
+_Notice that `password` is NOT present in the response._
+
+```json
+{
+  "id": 5,
+  "username": "new_user",
+  "email": "new@test.com",
+  "first_name": "Juan",
+  "last_name": "Perez",
+  "role": "EMPLOYEE",
+  "is_active": true
+}
+```
+### 4.1. User Validation Errors (400 Bad Request)
+
+Common error responses related to database constraints defined in the User model.
+
+**Case A: Unique Email Constraint**
+Since email is defined as unique=True and acts as the USERNAME_FIELD, attempting to register an email that is already taken will trigger this error.
+
+```json
+{
+  "email": [
+    "custom user with this email already exists."
+  ]
+}
+```
+**Case B: Required Fields Missing**
+`first_name` and `last_name` do not have blank=True, so they cannot be empty.
+{
+  "first_name": [
+    "This field is required."
+  ],
+  "password": [
+    "This field is required."
+  ]
+}
+
 ### 5. Update User Profile
 
 Updates details of the currently authenticated user.

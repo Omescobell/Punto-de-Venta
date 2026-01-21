@@ -15,5 +15,5 @@ class Supplier(models.Model):
         return reverse("supplier_detail", kwargs={"pk": self.pk})
     
     def __str__(self):
-        return f"{self.name}, {self.mobile_number}"
+        return f"{self.name}, {self.phone_number}"
     
