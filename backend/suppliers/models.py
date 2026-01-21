@@ -3,7 +3,7 @@ from django.urls import reverse
 
 class Supplier(models.Model):
     name = models.CharField(max_length=100)
-    mobile_number = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20)
     contact_person = models.CharField(max_length=40)
     rfc = models.CharField(max_length=40)
     tax_address = models.CharField(max_length=250)

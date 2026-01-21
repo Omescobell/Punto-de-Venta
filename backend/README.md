@@ -231,6 +231,85 @@ Operations on a specific supplier identified by its ID.
 ```
 **Response (`204` No Content):**
 * **Returned upon successful deletion (`DELETE`).**
+
+## Customer Management
+
+Allows authenticated users (including Employees) to register and manage customers for the POS system.
+### 11. List & Create Customers
+
+*   **Endpoint:** `/customers/`
+
+*   **Methods:** `GET`, `POST`
+
+*   **Access:** Authenticated (Any `Role`)
+
+**Request Body (`POST`):**
+
+**Note:** is_frequent is read-only and defaults to false.
+```json
+{
+  "first_name": "Maria",
+  "last_name": "González",
+  "phone_number": "5544332211",
+  "email": "maria.gonzalez@email.com",
+  "birth_date": "1995-08-20"
+}
+```
+**Response (`201` Created):**
+```json
+{
+  "id": 1,
+  "first_name": "Maria",
+  "last_name": "González",
+  "phone_number": "5544332211",
+  "email": "maria.gonzalez@email.com",
+  "birth_date": "1995-08-20",
+  "is_frequent": false
+}
+```
+### 12. Validation Errors (400 Bad Request)
+
+The API enforces unique constraints and required fields. Below are the standard error responses for invalid inputs.
+
+**Case A:** Duplicate Entry (Unique Constraints)
+Occurs when trying to register a phone_number or email that already exists in the database.
+```json
+{
+  "phone_number": [
+    "customer with this phone number already exists."
+  ],
+  "email": [
+    "customer with this email already exists."
+  ]
+}
+```
+**Case B:** Missing or Blank Fields
+Occurs when required fields are omitted or sent as empty strings.
+
+```json
+{
+  "first_name": [
+    "This field is required."
+  ],
+  "birth_date": [
+    "Date has wrong format. Use one of these formats instead: YYYY-MM-DD."
+  ]
+}
+```
+### 13. Customer Details
+
+*   **Endpoint:** `/customers/{id}/`
+
+*   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE`
+
+*   **Access:** Authenticated
+
+**Request Body (`PATCH`):**
+```json
+{
+  "email": "maria.nueva@email.com"
+}
+```
 ## Data Definitions
 ### User Roles
 

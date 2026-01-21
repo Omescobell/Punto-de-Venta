@@ -4,7 +4,7 @@ from django.urls import reverse
 class Customer(models.Model):
     first_name = models.CharField(max_length=60)
     last_name = models.CharField(max_length=60)
-    phone_number = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20, unique=True)
     email = models.EmailField(unique=True)
     birth_date = models.DateField()
     is_frequent = models.BooleanField(default=False)
