@@ -330,13 +330,31 @@ Allows authenticated users (including Employees) to register and manage customer
 **Response (`201` Created):**
 ```json
 {
+  {
   "id": 1,
   "first_name": "Maria",
   "last_name": "González",
   "phone_number": "5544332211",
   "email": "maria.gonzalez@email.com",
   "birth_date": "1995-08-20",
-  "is_frequent": false
+  "is_frequent": false,
+  "current_points": 0 //Default 0
+  }
+}
+```
+**Response (`200` OK):**
+
+**Note**: current_points is read-only and calculated automatically based on transactions.
+```json
+{
+  "id": 1,
+  "first_name": "Maria",
+  "last_name": "González",
+  "phone_number": "5544332211",
+  "email": "maria.gonzalez@email.com",
+  "birth_date": "1995-08-20",
+  "is_frequent": false,
+  "current_points": 150 
 }
 ```
 ### 12. Validation Errors (400 Bad Request)
@@ -381,6 +399,80 @@ Occurs when required fields are omitted or sent as empty strings.
 {
   "email": "maria.nueva@email.com"
 }
+```
+## Loyalty Points System
+
+Endpoints dedicated to managing the customer's loyalty balance securely. Modifying current_points directly via the Customer Update endpoint is not possible; changes must be made through transactions.
+### 14. Add or Redeem Points
+
+Manually adds (EARN) or subtracts (REDEEM) points from a customer's balance. This creates a transaction record and updates the balance atomically.
+
+*   **Endpoint:** `/customers/{id}/points/`
+
+*   **Method:** `POST`
+
+*   **Access:** `Authenticated`
+
+#### Transaction Types:
+
+*   **`EARN`**: Accumulate points from a purchase.
+
+*   **`REDEEM`**: Spend points (Amount should be negative or handled by backend logic).
+
+*   **`ADJUSTMENT`**: Manual correction.
+
+**Request Body (`Earn` Points):**
+```json
+{
+  "amount": 100,
+  "transaction_type": "EARN",
+  "description": "Purchase #1024 Bonus"
+}
+```
+**Request Body (Redeem Points):**
+```json
+{
+  "amount": -50,
+  "transaction_type": "REDEEM",
+  "description": "Discount applied"
+}
+```
+**Response (201 Created):**
+```json
+{
+  "status": "success",
+  "new_balance": 200
+}
+```
+
+### 15. Points History
+
+Retrieves the full ledger of transactions for a specific customer, ordered by date (newest first).
+
+*   **Endpoint:** `/customers/{id}/history/`
+
+*   **Method:** `GET`
+
+*   **Access:** Authenticated
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 10,
+    "amount": -50,
+    "transaction_type": "REDEEM",
+    "description": "Discount applied",
+    "created_at": "2023-10-27T14:30:00Z"
+  },
+  {
+    "id": 9,
+    "amount": 100,
+    "transaction_type": "EARN",
+    "description": "Purchase #1024 Bonus",
+    "created_at": "2023-10-27T14:00:00Z"
+  }
+]
 ```
 ## Data Definitions
 ### User Roles
