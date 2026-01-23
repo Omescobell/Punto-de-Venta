@@ -27,26 +27,26 @@ class Product(models.Model):
 class Promotion(models.Model):
     name = models.CharField(max_length=50)
     description = models.TextField()
-    discount_percent = models.DecimalField(max_digits=2,decimal_places=2)
-    start_date = models.TimeField(null=False)
-    end_date = models.TimeField(null=False)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    start_date = models.DateField(null=False)
+    end_date = models.DateField(null=False)
+    
     TARGET_CHOICES = [
         ('ALL', 'Todos los clientes'),
-        ('FREQUENTY', 'Cliente frecuente'),
+        ('FREQUENT_ONLY', 'Cliente frecuente'), 
     ]
-    target_audience = models.CharField(max_length=30,choices=TARGET_CHOICES)
-    is_active = models.BooleanField()
+    target_audience = models.CharField(max_length=30, choices=TARGET_CHOICES)
+    is_active = models.BooleanField(default=True)
+    
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name="promotions")
+        related_name="promotions"
+    )
     
     class Meta:
-        db_table = 'PROMOTIONS  '
+        db_table = 'PROMOTIONS' 
 
-    def get_absolute_url(self):
-        return reverse("promotion_detail", kwargs={"pk": self.pk})
-    
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.name} (-{self.discount_percent}%)"
 

@@ -474,6 +474,196 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
   }
 ]
 ```
+
+## Product Management
+
+**Security Notice:**
+
+*   **Employees:** Can `List`, `Create`, `Update`, and `Reserve` stock. They CANNOT `delete` products.
+
+*   **Admins/Owners:** Have full access, including Delete.
+
+### 16. List & Create Products
+
+Retrieves the product catalog or registers a new item in the inventory.
+
+*   **Endpoint:** `/products/`
+
+*   **Methods:** `GET`, `POST`
+
+*   **Access:** Authenticated (Any Role)
+
+Request Body (POST):
+
+*   **`sku`:** Unique. Stock Keeping Unit identifier.
+
+*   **`supplier`:** ID of the registered supplier.
+```json
+{
+  "name": "Coca Cola 600ml",
+  "sku": "KO-600-MX",
+  "price": 18.50,
+  "current_stock": 100,
+  "min_stock": 10,
+  "supplier": 1
+}
+```
+### 17. Product Details & Stock Reservation
+
+Operations on a specific product. This includes the special endpoint to manage "Reserved Stock" atomically.
+
+*   **Endpoint:** `/products/{id}/`
+
+*   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE` (`Admin` only)
+
+### 17.1. Reserve or Release Stock
+
+Used by the POS system when adding items to a cart (Reserve) or cancelling a cart (Release). Prevents race conditions.
+
+*   **Endpoint:** `/products/{id}/reserve/`
+
+*   **Method:** `POST`
+
+*   **Access:** Authenticated (Employees Allowed)
+
+**Request Body:**
+
+*   `amount`: Positive integer to reserve, Negative integer to release.
+```json
+{
+  "amount": 5
+}
+```
+**Respone(200 OK):**
+```json
+{
+  "status": "success",
+  "product": "Coca Cola 600ml",
+  "reserved_quantity": 5,
+  "available_to_sell": 95
+}
+```
+
+## Promotion Management
+
+**Security Notice:**
+
+*   **Employees:** Read-Only access (to apply discounts during sales).
+
+*   **Admins/Owners:** Full access (Create/Edit/Delete).
+
+18. List & Filter Promotions
+
+To view promotions for a specific product, use the `?product={id}` query parameter.
+
+*   **Endpoint:** `/promotions/?product={id}`
+
+*   **Method:** `GET`
+
+*   **Access:** Authenticated (Any Role)
+
+**Example URL:** `/api/promotions/?product=15`
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Summer Sale",
+    "description": "Valid for frequent customers only",
+    "discount_percent": "15.00",
+    "start_date": "2023-06-01",
+    "end_date": "2023-06-30",
+    "target_audience": "FREQUENT_ONLY",
+    "is_active": true,
+    "product": 15
+  }
+]
+```
+19. Create & Update Promotions
+
+*   **Endpoint:** `/promotions/` (`Create`) or `/promotions/{id}/` (`Update`)
+
+*   **Methods:** `POST`, `PUT`, `PATCH`, `DELETE`
+
+*   **Access:** Restricted (`ADMIN` or `OWNER`)
+
+**Request Body (POST):**
+
+_Note: product `ID` is required in the body._
+```json
+{
+  "name": "Black Friday",
+  "description": "50% off on electronics",
+  "product": 15,
+  "discount_percent": 50.00,
+  "start_date": "2023-11-24",
+  "end_date": "2023-11-26",
+  "target_audience": "ALL"
+}
+```
+### Error Handling & Validations
+
+Common validation errors specific to the Products and Promotions modules.
+
+**Case A: Duplicate SKU (Product)**
+
+The `sku` field must be unique across the entire database.
+
+**Status:** `400 Bad Request`
+```json
+{
+  "sku": [
+    "product with this sku already exists."
+  ]
+}
+```
+**Case B: Invalid Dates (Promotion)**
+
+The `start_date` cannot be later than the `end_date`. This validation runs on both Create (`POST`) and Update (`PATCH`).
+
+**Status:** `400 Bad Request`
+```json
+{
+  "end_date": [
+    "La fecha de finalización debe ser posterior a la fecha de inicio."
+  ]
+}
+```
+**Case C: Insufficient Stock (Reservation)**
+
+Occurs when trying to reserve more items than physically available (`current_stock`).
+
+**Status:** `400 Bad Request`
+```json
+{
+  "error": "Insufficient stock.",
+  "available": 2
+}
+```
+**Case D: Invalid Release (Reservation)**
+
+Occurs when trying to release (negative amount) more items than are currently reserved.
+
+**Status:** `400 Bad Request`
+
+```json
+{
+  "error": "Cannot release more items than reserved."
+}
+```
+
+**Case E: Permission Denied (Delete/Promotions)**
+
+Occurs when an Employee tries to delete a product or modify a promotion.
+
+**Status:** `403 Forbidden`
+
+```json
+{
+  "detail": "You do not have permission to perform this action."
+}
+```
 ## Data Definitions
 ### User Roles
 
