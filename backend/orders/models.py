@@ -1,22 +1,24 @@
 from django.db import models
 from django.urls import reverse
-
+import uuid
 class Order(models.Model):
-    ticket_folio = models.CharField(max_length=50, unique=True)
+    ticket_folio = models.CharField(max_length=50, unique=True, blank=True)
+    
     PAYMENT_CHOICES = [
         ('CARD', 'Tarjeta'),
         ('CASH', 'Efectivo'),
     ]
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     STATUS_CHOICES = [
         ('PAID', 'Pagado'),
         ('PENDING', 'Pendiente'),
         ('CANCELED', 'Cancelado'),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PAID') 
     created_at = models.DateTimeField(auto_now_add=True)
+    
     customer = models.ForeignKey(
         'customers.Customer', 
         on_delete=models.SET_NULL,
@@ -33,6 +35,11 @@ class Order(models.Model):
 
     class Meta:
         db_table = 'ORDERS'
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_folio:
+            self.ticket_folio = str(uuid.uuid4()).split('-')[0].upper()
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse("order_detail", kwargs={"pk": self.pk})

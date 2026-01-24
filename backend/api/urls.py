@@ -6,6 +6,7 @@ from users.urls import router as users_router
 from suppliers.urls import router as suppliers_router
 from customers.urls import router as customer_router
 from products.urls import router as products_router
+from orders.urls import router as orders_router
 
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import MyTokenObtainPairView
@@ -16,6 +17,7 @@ master_router.registry.extend(users_router.registry)
 master_router.registry.extend(suppliers_router.registry)
 master_router.registry.extend(customer_router.registry)
 master_router.registry.extend(products_router.registry)
+master_router.registry.extend(orders_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
