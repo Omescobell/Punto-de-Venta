@@ -144,20 +144,21 @@ class CustomerTests(APITestCase):
     
     def test_customer_becomes_frequent_based_on_last_month(self):
         import calendar
-        # CORRECCIÓN 1: Importamos datetime y timedelta explícitamente
         from datetime import datetime, timedelta 
         from django.utils import timezone
         from orders.models import Order
 
-        # 1. Calcular el mes pasado
+        self.customer.orders.all().delete()
+
         today = timezone.now().date()
         first_day_current = today.replace(day=1) 
         last_day_prev = first_day_current - timedelta(days=1)
         first_day_prev = last_day_prev.replace(day=1)
 
         #Obtener las semanas reales de ese mes
-        # first_weekday=0 significa que la semana empieza en Lunes (estándar Django/ISO)
         weeks = calendar.monthcalendar(first_day_prev.year, first_day_prev.month)
+        
+        orders_created = []
 
         for week in weeks:
         # Buscamos un día válido en esa semana (los 0 son relleno de otro mes)
@@ -178,9 +179,41 @@ class CustomerTests(APITestCase):
         
 
             Order.objects.filter(pk=order.pk).update(created_at=date_sim)
+            order.refresh_from_db()
+
+            orders_created.append(order)
 
         #Verificación
+        
         self.customer.refresh_from_db() 
         es_frecuente = self.customer.update_frequent_status()
 
         self.assertTrue(es_frecuente, f"Falló: El mes tuvo {len(weeks)} semanas y no se detectaron todas.")
+
+        #Verificar que se actualizó la fecha de chequeo
+        today = timezone.now().date()
+        self.assertEqual(
+            self.customer.last_status_check, 
+            today, 
+            "Error: El campo last_status_check no se actualizó a la fecha de hoy."
+        )
+        print(f"\n[DEBUG] Total Orders in DB: {self.customer.orders.count()}")
+        # Verificar que la función NO recalcula si se llama por segunda vez hoy
+        
+        if len(orders_created) > 1:
+            orders_created[1].delete() 
+        else:
+            orders_created[0].delete()
+        
+        resultado_cache = self.customer.update_frequent_status()
+        self.assertTrue(resultado_cache, "Falló la optimización: Recalculó a pesar de tener fecha actualizada.")
+
+        # Forzar recalculo para verificar
+        self.customer.last_status_check = None
+        self.customer.save()
+
+
+        # Ahora sí debe darse cuenta de que falta una orden
+        resultado_recalculado = self.customer.update_frequent_status()
+        
+        self.assertFalse(resultado_recalculado, "Error: Al borrar una orden y resetear la fecha, debió perder el estatus.")

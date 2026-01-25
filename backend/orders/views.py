@@ -4,7 +4,6 @@ from .serializers import OrderSerializer
 from .permissions import IsAdminOrOwner
 
 class OrderViewSet(viewsets.ModelViewSet):
-    # Optimizamos la consulta con prefetch_related para traer los items de un jalón
     queryset = Order.objects.all().prefetch_related('items').order_by('-created_at')
     serializer_class = OrderSerializer
 
