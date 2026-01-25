@@ -315,6 +315,12 @@ Allows authenticated users (including Employees) to register and manage customer
 
 *   **Access:** Authenticated (Any `Role`)
 
+**Frequent Customer Status:** The `is_frequent` field is managed automatically by the system.
+
+*   **Criteria:** A customer achieves "Frequent" status if they made at least one purchase in every   distinct calendar week of the previous month.
+
+*   **Update Frequency:** This status is evaluated [AFTER A PURCHAE, ONLY ONCE A MONT].
+
 **Request Body (`POST`):**
 
 **Note:** is_frequent is read-only and defaults to false.
@@ -526,9 +532,13 @@ Used by the POS system when adding items to a cart (Reserve) or cancelling a car
 
 *   **Access:** Authenticated (Employees Allowed)
 
-**Request Body:**
+**Logic:**
 
-*   `amount`: Positive integer to reserve, Negative integer to release.
+*   **Reserve (Add to cart):** Send a positive integer.
+
+*   **Release (Remove from cart):** Send a negative integer.
+
+**Scenario A: Reserve Stock (Add 5 items)**
 ```json
 {
   "amount": 5
@@ -543,6 +553,23 @@ Used by the POS system when adding items to a cart (Reserve) or cancelling a car
   "available_to_sell": 95
 }
 ```
+**Scenario B: Release Stock (Cancel 2 items)**
+
+_Use a negative number to subtract from the reserved quantity._
+```json
+{
+  "amount": -2
+}
+```
+**Respone(200 OK):**
+```json
+{
+  "status": "success",
+  "product": "Coca Cola 600ml",
+  "reserved_quantity": 3, //Updated total reserved
+  "available_to_sell": 95
+}
+```
 
 ## Promotion Management
 
@@ -552,7 +579,7 @@ Used by the POS system when adding items to a cart (Reserve) or cancelling a car
 
 *   **Admins/Owners:** Full access (Create/Edit/Delete).
 
-18. List & Filter Promotions
+### 18. List & Filter Promotions
 
 To view promotions for a specific product, use the `?product={id}` query parameter.
 
@@ -580,7 +607,7 @@ To view promotions for a specific product, use the `?product={id}` query paramet
   }
 ]
 ```
-19. Create & Update Promotions
+### 19. Create & Update Promotions
 
 *   **Endpoint:** `/promotions/` (`Create`) or `/promotions/{id}/` (`Update`)
 
@@ -664,6 +691,173 @@ Occurs when an Employee tries to delete a product or modify a promotion.
   "detail": "You do not have permission to perform this action."
 }
 ```
+
+## Order Management (Point of Sale)
+
+This module handles the core transactional logic. It uses Atomic Transactions to ensure data integrity: if any part of the sale fails (e.g., insufficient stock for one item), the entire order is rolled back.
+
+**Key Features:**
+
+*   **Inventory sync:** Automatically deducts `current_stock` and clears `reserved_quantity`.
+
+*   **Loyalty Integration:** Calculates points (1% of total) and updates the customer's level.
+
+*   **Price Snapshot:** Stores the `unit_price` at the moment of sale, preventing historical data changes if catalog prices are updated later.
+
+### 20. List & Create Orders
+
+Retrieves the sales history or processes a new sale.
+
+*   **Endpoint:** `/orders/`
+
+*   **Methods:** `GET`, `POST`
+
+*   **Access:** Authenticated (All Roles - Employees are allowed to sell)
+
+**Request Body (POST - New Sale):**
+
+*   **`customer`:** Optional. `ID` of the registered customer. If omitted, the sale is treated as "Anonymous".
+
+*   **`items`:** Required. List of products to purchase.
+
+*   **`promotion_id`:** Optional. ID of a specific promotion to apply to a line item.
+
+```json
+{
+  "customer": 1, 
+  "payment_method": "CASH",
+  "items": [
+    {
+      "product_id": 15,
+      "quantity": 2,
+      "promotion_id": 5
+    },
+    {
+      "product_id": 20,
+      "quantity": 1
+      // No promotion applied
+    }
+  ]
+}
+```
+**Response (201 Created):**
+
+_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend._
+```json
+{
+  "id": 102,
+  "ticket_folio": "F47AC10B",
+  "created_at": "2023-10-27T15:30:00Z",
+  "payment_method": "CASH",
+  "status": "PAID",
+  "seller_name": "employee_juan",
+  "customer": 1,
+  "customer_name": "Maria González",
+  "total": "250.50",
+  "items": [
+    {
+      "product_id": 15,
+      "quantity": 2,
+      "product_name": "Coca Cola 600ml",
+      "unit_price": "100.00",
+      "promotion_name": "Summer Sale",
+      "discount_amount": "20.00",
+      "subtotal": "180.00"
+    },
+    {
+      "product_id": 20,
+      "quantity": 1,
+      "product_name": "Chips",
+      "unit_price": "70.50",
+      "promotion_name": null,
+      "discount_amount": "0.00",
+      "subtotal": "70.50"
+    }
+  ]
+}
+```
+
+### 21. Order Details & Management
+
+Retrieves full details of a specific ticket.
+
+**Security Notice:** While Employees can create orders, Updates and Deletions are strictly restricted to `ADMIN` or `OWNER`roles to prevent fraud (e.g., modifying a ticket after payment).
+
+*   **Endpoint:** `/orders/{id}/`
+
+*   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE`
+
+*   **Access:
+
+       *   **`GET`:** Authenticated (All Roles)
+
+       *   **`PUT`/`PATCH`/`DELETE`:** Restricted (`ADMIN` or `OWNER`)
+
+**Response (200 OK):**
+
+Returns the same structure as the "Create Order" response.
+
+### 22. Order Validation Errors (400 Bad Request)
+
+The API performs strict validation on stock levels and business rules before processing any payment.
+
+**Case A:** Insufficient Stock Occurs when the requested quantity exceeds the `current_stock` available in the database. The entire transaction is rejected.
+```json
+{
+  "non_field_errors": [
+    "Stock insuficiente para Producto Test. Disponible: 5"
+  ]
+}
+```
+**Case B:** Empty Order Occurs when the items list is empty or missing.
+```json
+{
+  "items": [
+    "No se puede crear una orden sin productos."
+  ]
+}
+```
+**Case C:** Invalid Quantity Quantities must be positive integers greater than zero.
+```json
+{
+  "items": [
+    {
+      "quantity": [
+        "La cantidad debe ser al menos 1."
+      ]
+    }
+  ]
+}
+```
+**Case D:** Integrity Errors Occurs if the provided product_id or customer ID does not exist.
+```json
+{
+  "items": [
+    {
+      "product_id": [
+        "Invalid pk \"9999\" - object does not exist."
+      ]
+    }
+  ]
+}
+```
+### Business Logic Notes (Internal Guide)
+
+**Promotions:**
+
+*   The system validates that the promotion is active, within the date range, and matches the product.
+
+*   If target_audience is set to FREQUENT_ONLY, the discount will be silently ignored (set to 0.00) if the customer is not a frequent buyer or if the sale is anonymous.
+
+**Loyalty Points:**
+
+*   Points are calculated as 1% of the total purchase, rounded to the nearest integer.
+
+*   Points are only assigned if a customer is linked to the order.
+
+**Data Snapshots:**
+
+*   The system saves a copy of product_name and unit_price in the OrderItems table. Future changes to the Product Catalog (e.g., price increases) will not affect historical sales records.
 ## Data Definitions
 ### User Roles
 
