@@ -140,4 +140,47 @@ class CustomerTests(APITestCase):
         
         self.customer.refresh_from_db()
         self.assertEqual(self.customer.first_name, "Nombre Hackeado")
-        self.assertEqual(self.customer.current_points, 0) 
+        self.assertEqual(self.customer.current_points, 0)
+    
+    def test_customer_becomes_frequent_based_on_last_month(self):
+        import calendar
+        # CORRECCIÓN 1: Importamos datetime y timedelta explícitamente
+        from datetime import datetime, timedelta 
+        from django.utils import timezone
+        from orders.models import Order
+
+        # 1. Calcular el mes pasado
+        today = timezone.now().date()
+        first_day_current = today.replace(day=1) 
+        last_day_prev = first_day_current - timedelta(days=1)
+        first_day_prev = last_day_prev.replace(day=1)
+
+        #Obtener las semanas reales de ese mes
+        # first_weekday=0 significa que la semana empieza en Lunes (estándar Django/ISO)
+        weeks = calendar.monthcalendar(first_day_prev.year, first_day_prev.month)
+
+        for week in weeks:
+        # Buscamos un día válido en esa semana (los 0 son relleno de otro mes)
+            day = next(d for d in week if d != 0)
+        
+            # Construimos la fecha y luego la hacemos aware
+            naive_date = datetime(first_day_prev.year, first_day_prev.month, day)
+            date_sim = timezone.make_aware(naive_date)
+    
+            order = Order.objects.create(
+                ticket_folio=f"OLD-{date_sim.day}",
+                total=100,
+                status='PAID',
+                customer=self.customer,
+                seller=self.user,
+                payment_method='CASH'
+            )
+        
+
+            Order.objects.filter(pk=order.pk).update(created_at=date_sim)
+
+        #Verificación
+        self.customer.refresh_from_db() 
+        es_frecuente = self.customer.update_frequent_status()
+
+        self.assertTrue(es_frecuente, f"Falló: El mes tuvo {len(weeks)} semanas y no se detectaron todas.")

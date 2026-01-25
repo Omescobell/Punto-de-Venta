@@ -131,8 +131,11 @@ class OrderSerializer(serializers.ModelSerializer):
                         order=order,
                         description=f"Puntos por ticket {order.ticket_folio}"
                     )
+                    
                     # Actualización segura de puntos
                     order.customer.current_points = F('current_points') + points_earned
+
+                    order.customer.update_frequent_status()
                     order.customer.save()
 
         return order
