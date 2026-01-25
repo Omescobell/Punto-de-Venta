@@ -742,7 +742,7 @@ Retrieves the sales history or processes a new sale.
 ```
 **Response (201 Created):**
 
-_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend._
+_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend. `The product_id` is REQUIRED_
 ```json
 {
   "id": 102,
@@ -756,7 +756,7 @@ _Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automat
   "total": "250.50",
   "items": [
     {
-      "product_id": 15,
+      "product_id": 15, - REQUIRED
       "quantity": 2,
       "product_name": "Coca Cola 600ml",
       "unit_price": "100.00",
