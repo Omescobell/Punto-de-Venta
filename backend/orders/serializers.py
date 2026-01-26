@@ -130,6 +130,7 @@ class OrderSerializer(serializers.ModelSerializer):
             order.final_amount = final_ammount
             order.total = total
             order.discount_applied = discount_applied
+            order.money_saved_total = total_save
             order.save()
 
             #Puntos del cliente

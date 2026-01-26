@@ -69,12 +69,15 @@ class SaleProcessTests(APITestCase):
         # * Total a Pagar: 200 - 20 = 180.
         order = Order.objects.first()
         self.assertEqual(float(order.final_amount), 180.00)
-        
+        self.assertEqual(float(order.money_saved_total), 20.00)
+        self.assertAlmostEqual(float(order.discount_applied), 0.10, places=2)
+
         item = order.items.first()
         self.assertEqual(float(item.unit_price), 100.00)
         self.assertEqual(float(item.discount_amount), 20.00)
         self.assertEqual(float(item.subtotal), 180.00)
         self.assertEqual(item.promotion_name, "Desc 10%")
+
 
     
         self.product.refresh_from_db()
@@ -127,7 +130,12 @@ class SaleProcessTests(APITestCase):
         
         order = Order.objects.first()
         # 100 * 1 = 100. Sin descuento.
+        self.assertEqual(float(order.total), 100.00)
         self.assertEqual(float(order.final_amount), 100.00)
+        
+        # Ahorro y porcentaje deben ser CERO
+        self.assertEqual(float(order.money_saved_total), 0.00)
+        self.assertEqual(float(order.discount_applied), 0.00)
 
     def test_stock_reservation_logic_overflow(self):
         """
@@ -497,7 +505,13 @@ class SaleProcessTests(APITestCase):
         
         #$100 - 10% = $90
         self.assertEqual(float(order_1.final_amount), 90.00)
+        self.assertEqual(float(order_1.total), 100.00)
         
+        # El ahorro es 10 pesos
+        self.assertEqual(float(order_1.money_saved_total), 10.00)
+        
+        # El porcentaje es 10% (0.10)
+        self.assertAlmostEqual(float(order_1.discount_applied), 0.10, places=2)
         # Validación de Bandera en la Orden
         self.assertTrue(order_1.is_birthday_discount_applied)
 

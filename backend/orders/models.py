@@ -13,7 +13,13 @@ class Order(models.Model):
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_birthday_discount_applied = models.BooleanField(default=False, help_text="Indica si se aplicó descuento de cumpleaños")
-
+    money_saved_total = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Monto total ahorrado (Suma de descuentos)"
+    )
+    
     STATUS_CHOICES = [
         ('PAID', 'Pagado'),
         ('PENDING', 'Pendiente'),
