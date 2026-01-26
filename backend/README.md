@@ -704,6 +704,8 @@ This module handles the core transactional logic. It uses Atomic Transactions to
 
 *   **Price Snapshot:** Stores the `unit_price` at the moment of sale, preventing historical data changes if catalog prices are updated later.
 
+*   **Birthday Logic:** Automatically detects if today is the customer's birthday and apply 10% discount.
+
 ### 20. List & Create Orders
 
 Retrieves the sales history or processes a new sale.
@@ -751,9 +753,13 @@ _Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automat
   "payment_method": "CASH",
   "status": "PAID",
   "seller_name": "employee_juan",
+  "money_saved_total": 20.00,          
+  "discount_applied": 0.07,            
+  "is_birthday_discount_applied": true,
   "customer": 1,
   "customer_name": "Maria González",
-  "total": "250.50",
+  "total": "270.50",
+  "final_ammount" : "250.50"
   "items": [
     {
       "product_id": 15, - REQUIRED
