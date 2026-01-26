@@ -2,8 +2,6 @@ from django.db import models
 from django.urls import reverse
 from django.db.models.functions import ExtractWeek
 from django.utils import timezone
-from datetime import timedelta
-import calendar
 
 class Customer(models.Model):
     first_name = models.CharField(max_length=60)
@@ -14,16 +12,28 @@ class Customer(models.Model):
     is_frequent = models.BooleanField(default=False)
     current_points = models.IntegerField(default=0)
     last_status_check = models.DateField(null=True, blank=True)
+    last_birthday_discount_year = models.IntegerField(null=True, blank=True)
+
+    @property
+    def is_birthday(self):
+        """Verifica si hoy es el cumpleaños del cliente (mes y día)"""
+        today = timezone.now().date()
+        return (self.birth_date.month == today.month and 
+                self.birth_date.day == today.day)
+
+    def can_receive_birthday_discount(self):
+        """Verifica si es su cumple y si NO ha usado el descuento este año"""
+        current_year = timezone.now().year
+        return (self.is_birthday and 
+                self.last_birthday_discount_year != current_year)
 
     def update_frequent_status(self):
         """
         Verifica si el cliente compró en TODAS las semanas del mes anterior.
         Si cumple, se vuelve frecuente. Si no, pierde el estatus.
         """
-        from django.utils import timezone
         import calendar
         from datetime import timedelta
-        from django.db.models.functions import ExtractWeek
 
         today = timezone.now().date()
 

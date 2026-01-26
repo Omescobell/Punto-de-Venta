@@ -10,6 +10,9 @@ class Order(models.Model):
     ]
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_birthday_discount_applied = models.BooleanField(default=False, help_text="Indica si se aplicó descuento de cumpleaños")
 
     STATUS_CHOICES = [
         ('PAID', 'Pagado'),

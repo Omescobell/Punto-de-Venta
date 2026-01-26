@@ -197,7 +197,6 @@ class CustomerTests(APITestCase):
             today, 
             "Error: El campo last_status_check no se actualizó a la fecha de hoy."
         )
-        print(f"\n[DEBUG] Total Orders in DB: {self.customer.orders.count()}")
         # Verificar que la función NO recalcula si se llama por segunda vez hoy
         
         if len(orders_created) > 1:

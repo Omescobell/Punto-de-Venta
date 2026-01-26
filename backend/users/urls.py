@@ -10,7 +10,4 @@ router.register(r'sessions', SessionViewSet, basename='session')
 urlpatterns = [
     # Rutas del ViewSet (users/ y sessions/)
     path('', include(router.urls)),
-    # Rutas de Autenticación
-    path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

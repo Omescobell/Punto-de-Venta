@@ -68,7 +68,7 @@ class SaleProcessTests(APITestCase):
         # * Descuento: 10% de 100 = 10. Por 2 items = 20.
         # * Total a Pagar: 200 - 20 = 180.
         order = Order.objects.first()
-        self.assertEqual(float(order.total), 180.00)
+        self.assertEqual(float(order.final_amount), 180.00)
         
         item = order.items.first()
         self.assertEqual(float(item.unit_price), 100.00)
@@ -127,7 +127,7 @@ class SaleProcessTests(APITestCase):
         
         order = Order.objects.first()
         # 100 * 1 = 100. Sin descuento.
-        self.assertEqual(float(order.total), 100.00)
+        self.assertEqual(float(order.final_amount), 100.00)
 
     def test_stock_reservation_logic_overflow(self):
         """
@@ -463,7 +463,57 @@ class SaleProcessTests(APITestCase):
         
         order = Order.objects.first()
         # Total debe ser 0
-        self.assertEqual(float(order.total), 0.00)
+        self.assertEqual(float(order.final_amount), 0.00)
         
         # Puntos: 1% de 0 es 0. No debe haber transacción de puntos.
         self.assertEqual(PointsTransaction.objects.count(), 0)
+
+    def test_birthday_discount_logic_and_restriction(self):
+        """
+        Lógica de Cumpleaños:
+        1. Si es cumple, aplica 10% extra.
+        2. Se actualiza el año de uso en el cliente.
+        3. Si compra de nuevo, YA NO aplica (solo 1 vez por año).
+        """
+        self.client.force_authenticate(user=self.seller)
+
+        today = date.today()
+        # Forzamos que nació hoy, pero en 1990
+        self.customer.birth_date = today.replace(year=1990)
+        self.customer.last_birthday_discount_year = None 
+        self.customer.save()
+
+        # Datos de compra: 1 Producto de $100
+        data = {
+            "customer": self.customer.id,
+            "payment_method": "CASH",
+            "items": [{"product_id": self.product.id, "quantity": 1}]
+        }
+
+        response_1 = self.client.post(self.url, data, format='json')
+        self.assertEqual(response_1.status_code, status.HTTP_201_CREATED)
+        
+        order_1 = Order.objects.get(id=response_1.data['id'])
+        
+        #$100 - 10% = $90
+        self.assertEqual(float(order_1.final_amount), 90.00)
+        
+        # Validación de Bandera en la Orden
+        self.assertTrue(order_1.is_birthday_discount_applied)
+
+        # Validación de Bloqueo en Cliente
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.last_birthday_discount_year, today.year)
+
+        # Segunda Compra (Debe ser Precio Normal)
+        # Intentamos comprar lo mismo inmediatamente
+        response_2 = self.client.post(self.url, data, format='json')
+        self.assertEqual(response_2.status_code, status.HTTP_201_CREATED)
+        
+        order_2 = Order.objects.get(id=response_2.data['id'])
+
+        #Precio Full $100 (Ya gastó su regalo)
+        self.assertEqual(float(order_2.final_amount), 100.00)
+        
+        # Validación de Bandera
+        self.assertFalse(order_2.is_birthday_discount_applied)

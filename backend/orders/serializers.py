@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 from .models import Order, OrderItems
 from products.models import Product, Promotion
-from customers.models import Customer, PointsTransaction
+from customers.models import PointsTransaction
 from decimal import Decimal
 from datetime import date
 
@@ -59,9 +60,8 @@ class OrderSerializer(serializers.ModelSerializer):
         
         with transaction.atomic():
             order = Order.objects.create(seller=user, **validated_data)
-            
-            total_order = 0
-
+            final_ammount = 0
+            total_save = Decimal("0.00")
             for item_data in items_data:
                 product = item_data['product']
                 quantity = item_data['quantity']
@@ -90,12 +90,13 @@ class OrderSerializer(serializers.ModelSerializer):
                         else:
                             savings_per_unit = (unit_price * (promotion.discount_percent / Decimal("100")))
                             money_saved_total = savings_per_unit * quantity
+                            total_save += money_saved_total
                             promo_name = promotion.name
                             applied_promotion_obj = promotion
 
                 subtotal_line = (unit_price * quantity) - money_saved_total
                 
-                total_order += subtotal_line
+                final_ammount += subtotal_line
 
                 OrderItems.objects.create(
                     order=order,
@@ -117,12 +118,23 @@ class OrderSerializer(serializers.ModelSerializer):
                 
                 product_db.save()
 
-            order.total = total_order
+            if order.customer and order.customer.can_receive_birthday_discount():
+                birthay_disccount = final_ammount * Decimal('0.10')
+                total_save += birthay_disccount
+                final_ammount -= birthay_disccount
+                order.customer.last_birthday_discount_year = timezone.now().year
+                order.customer.save()
+                order.is_birthday_discount_applied = True
+            total = final_ammount + total_save
+            discount_applied = total_save / total
+            order.final_amount = final_ammount
+            order.total = total
+            order.discount_applied = discount_applied
             order.save()
 
             #Puntos del cliente
             if order.customer:
-                points_earned = round(total_order * Decimal(0.01))
+                points_earned = round(final_ammount * Decimal(0.01))
                 if points_earned > 0:
                     PointsTransaction.objects.create(
                         customer=order.customer,

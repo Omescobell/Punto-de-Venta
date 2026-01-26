@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from rest_framework import status
+from django.urls import reverse
 from .models import RefreshToken
 
 User = get_user_model()
@@ -29,8 +30,8 @@ class AuthAndUserTests(APITestCase):
             address='Calle Falsa 123'    
         )
 
-        self.login_url = '/api/auth/login/'
-        self.users_list_url = '/api/users/'
+        self.login_url = '/auth/login/'
+        self.users_list_url = '/api/users/' 
         self.users_me_url = '/api/users/me/'
 
     def authenticate(self, user):
