@@ -755,7 +755,7 @@ _Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automat
   "seller_name": "employee_juan",
   "money_saved_total": 20.00,          
   "discount_applied": 0.07,            
-  "is_birthday_discount_applied": true,
+  "is_birthday_discount_applied": false,
   "customer": 1,
   "customer_name": "Maria González",
   "total": "270.50",
