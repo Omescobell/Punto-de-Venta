@@ -1,22 +1,32 @@
-"""
-URL configuration for api project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+#urls apps
+from users.urls import router as users_router
+from suppliers.urls import router as suppliers_router
+from customers.urls import router as customer_router
+from products.urls import router as products_router
+from orders.urls import router as orders_router
+from chatbot.urls import router as chatbot_router
+
+from rest_framework_simplejwt.views import TokenRefreshView
+from users.views import MyTokenObtainPairView
+
+master_router = DefaultRouter()
+
+master_router.registry.extend(users_router.registry)
+master_router.registry.extend(suppliers_router.registry)
+master_router.registry.extend(customer_router.registry)
+master_router.registry.extend(products_router.registry)
+master_router.registry.extend(orders_router.registry)
+master_router.registry.extend(chatbot_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    #Ruta maestra con todas las rutas de las apps (users,suppliers,customers,products)
+    path('api/', include(master_router.urls)),
+
+    path('api-auth/', include('rest_framework.urls')),
+    path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
