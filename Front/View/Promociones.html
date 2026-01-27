@@ -6,24 +6,23 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <title>Proveedores</title>
-    <link rel="stylesheet" href="/Public/Css/Usuarios.css">
+    <link rel="stylesheet" href="/Front/Public/Css/Promociones.css">
 </head>
 <body>
-    <script src="/Public/Js/toolbar.jsx"></script>
+    <script src="/Front/Public/Js/toolbar.jsx"></script>
     <header>
         <nav class="custom-navbar">
             <ul class="nav-list">
-                <li class="nav-item"><a href="/View/Usuarios">Usuarios</a></li>
-                <li class="nav-item active"><a href="/View/Proveedores">Proveedores</a></li>
-                <li class="nav-item"><a href="/View/Ventas">Ventas</a></li>
-                <li class="nav-item"><a href="/View/Inventario">Inventario</a></li>
-                <li class="nav-item"><a href="/View/Promociones">Promociones</a></li>  
-                <li class="nav-item"><a href="/View/Clientes">Clientes</a></li>  
-                <li class="nav-item"><a href="/View/Metricas">Métricas</a></li>  
+                <li class="nav-item"><a href="/Front/View/Usuarios">Usuarios</a></li>
+                <li class="nav-item"><a href="/Front/View/Proveedores">Proveedores</a></li>
+                <li class="nav-item"><a href="/Front/View/Ventas">Ventas</a></li>
+                <li class="nav-item"><a href="/Front/View/Inventario">Inventario</a></li>
+                <li class="nav-item active"><a href="/Front/View/Promociones">Promociones</a></li>  
+                <li class="nav-item"><a href="/Front/View/Clientes">Clientes</a></li>  
+                <li class="nav-item"><a href="/Front/View/Metricas">Métricas</a></li>  
             </ul>
         </nav>
     </header>
-
     <div class="Main-Container">
         <div class="Table-Wrapper">
             <table class="table table-bordered Custom-Table">
@@ -42,7 +41,7 @@
                         <td>20%</td>
                         <td>Frutas </td>
                         <td class="Action-Buttons">
-                            <button class="btn btn-secondary">Repetir</button>
+                            <button class="button_replay">Repetir</button>
                         </td>
                     </tr>
                     <tr>
@@ -51,7 +50,7 @@
                         <td></td>
                         <td></td>
                         <td class="Action-Buttons">
-                            <button class="btn btn-secondary">Repetir</button>
+                            <button class="button_replay">Repetir</button>
                         </td>
                     </tr>
                     <tr>
@@ -60,7 +59,7 @@
                         <td></td>
                         <td></td>
                         <td class="Action-Buttons">
-                            <button class="btn btn-secondary">Repetir</button>
+                            <button class="button_replay">Repetir</button>
                         </td>
                     </tr>
                     <tr>
@@ -69,75 +68,111 @@
                         <td></td>
                         <td></td>
                         <td class="Action-Buttons">
-                            <button class="btn btn-secondary">Repetir</button>
+                            <button class="button_replay">Repetir</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        <div class="Tools_Container">
+            <button class="button_add" data-bs-toggle="modal" data-bs-target="#AddModal"><i class="bi bi-plus-lg">Agregar</i></button>
+            <button class="button_add" data-bs-toggle="modal" data-bs-target="#CumpleañosModal">Cumpleaños</i></button> 
+        </div>
     </div>
 
-<div class="modal fade" id="AddModal" tabindex="-1" aria-labelledby="AddModalLabel" aria-hidden="true">
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content Custom-Modal-Style"> 
-            <div class="modal-body">
-                <h2 class="text-center mb-4">Agregar Proveedor</h2>
+            <div class="modal-body p-0">
+                <h2 class="text-center">Agregar Promocion</h2>
                 
                 <form>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" placeholder="Value">
+                    </div>
+
                     <div class="row">
-                        
-                        <div> </div>
-                        //* Descripcion, Clientes con acceso, Porcentaje de descuento.
-                        <div>
-
-                            <div class="col-6">
-                                <label for="description">Descripcion</label>
-                                <input type="text" id="description">
-                            </div>
-                            <div class="row col-6"> 
-                                <div class="col-6">
-                                    <label for="description">Clientes con acceso</label>
-                                    <select name="" id="">
-                                        <option selected>Seleccionar...</option>
-                                        <option value="1">Todos</option>
-                                        <option value="2">Clientes </option>
-                                        <option value="3">Clientes Especificos</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
-                                    <label for="description">Porcentaje de descuento</label>
-                                    <input type="number" id="description">
-                                </div>
-                            </div>
-
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Descripcion</label>
+                            <textarea class="form-control" placeholder="Value"></textarea>
                         </div>
-                        <div class="row">
-                            <div class="col-6">
-                                <label for="description">Fecha de inicio</label>
-                                <input type="date" id="description">
-                            </div>
-                            <div class="col-6">
-                                <label for="product">Productos</label>
-                                <select name="" id="">
-                                    <option selected>Seleccionar...</option>
-                                    <option value="1">Fruta</option>
-                                    <option value="2">Verdura</option>
-                                    <option value="3">Carne</option>
-                                    <option value="4">Pescado</option>
-                                    <option value="5">Lacteos</option>
-                                    <option value="6">Granos</option>
-                                    <option value="7">Bebidas</option>
-                                    <option value="8">Snacks</option>
-                                    <option value="9">Otros</option>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Clientes con acceso</label>
+                                <select class="form-select">
+                                    <option selected>Value</option>
+                                    <option value="1">Premium</option>
+                                    <option value="2">Todos</option>
                                 </select>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label">Porcentaje de Descuento</label>
+                                <input type="text" class="form-control" placeholder="Value">
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Agregar a Promociones</button>
+                    </div>
+
+                    <div class="row align-items-end mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Activo hasta</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" class="form-control text-center" placeholder="DD">
+                                <input type="text" class="form-control text-center" placeholder="MM">
+                                <input type="text" class="form-control text-center" placeholder="YYYY">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Producto</label>
+                            <select class="form-select">
+                                <option selected>Value</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-dark-custom">Agregar Promocion</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+</div>
+<div class="modal fade" id="CumpleañosModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content Custom-Modal-Style"> 
+            <div class="modal-body p-0"></div>
+            <h2 class="text-center">Modificar promocion de cumpleaños</h2>
+            <form>
+                <div class="mb-3">
+                    <label class="form-label">Tipo de promocion</label>
+                    <select class="form-select">
+                        <option selected>Value</option>
+                        <option value="1">Regalo</option>
+                        <option value="2">Descuento</option>
+                        <option value="3">Producto gratis</option>
+                        <option value="4">Multiplicar puntos</option>
+                    </select>
+                </div>
+                <div class="row mb-3">
+                    <div class=" col-6" >
+                        <label class="form-label">Gasto minimo</label>
+                        <input type="number" class="form-control" placeholder="Value">
+                    </div>
+                    <div class=" col-6">
+                        <label class="form-label">Descuento</label>
+                        <input type="number" class="form-control" placeholder="Value">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" style="margin-top: 20px;" class="btn btn-dark-custom">Modificar promocion de cumpleaños</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
 </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
