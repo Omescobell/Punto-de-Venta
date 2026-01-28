@@ -744,7 +744,7 @@ Retrieves the sales history or processes a new sale.
 ```
 **Response (201 Created):**
 
-_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend. `The product_id` is REQUIRED_
+_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend._
 ```json
 {
   "id": 102,
@@ -762,7 +762,7 @@ _Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automat
   "final_ammount" : "250.50"
   "items": [
     {
-      "product_id": 15, - REQUIRED
+      "product_id": 15,
       "quantity": 2,
       "product_name": "Coca Cola 600ml",
       "unit_price": "100.00",
@@ -864,6 +864,90 @@ The API performs strict validation on stock levels and business rules before pro
 **Data Snapshots:**
 
 *   The system saves a copy of product_name and unit_price in the OrderItems table. Future changes to the Product Catalog (e.g., price increases) will not affect historical sales records.
+
+## ChatBot User Management
+
+**Security Notice:**
+
+*  **Employees:** No Access (Requests return 403 Forbidden).
+
+*  **Admins/Owners:** Full access (Create/Read/Update/Delete).
+
+### 23. List & Retrieve Users
+
+To view all registered Telegram users or retrieve details for a specific user by their mobile number.
+
+*   **Endpoint:** `api/chatbotusers/` (List) or `/chatbotusers/{mobile_number}/` (Detail)
+
+*   **Method:** `GET`
+
+*   **Access:** Restricted (`ADMIN` or `OWNER`)
+
+    **Example URL:** `/api/chatbotusers/+521234567890/`
+
+**Response (200 OK):**
+
+```json
+{
+  "mobile_number": "+521234567890",
+  "name": "Juan Perez",
+  "last_interaction": "2023-10-27T10:30:00Z"
+}
+```
+###24. Create & Update Users
+
+*   **Endpoint:** `/chatbotusers/` (Create) or `/chatbotusers/{mobile_number}/` (Update)
+
+*   **Methods:** `POST`, `PATCH`, `DELETE`
+
+*   **Access:** Restricted (`ADMIN` or `OWNER`)
+
+**Request Body (`POST`):** Note: `mobile_number` serves as the Primary Key and must be unique.
+
+```json
+{
+  "mobile_number": "+521234567890",
+  "name": "Juan Perez"
+}
+```
+**Request Body (PATCH):** Note:`last_interaction` is read-only and cannot be modified manually.
+```json
+{
+  "name": "Juan Updated"
+}
+```
+### Error Handling & Validations
+
+Common validation errors specific to the ChatBot Users module.
+
+**Case A:** Permission Denied Occurs when a user with the Employee role attempts to access any endpoint in this module. Status: 403 Forbidden
+```json
+{
+  "detail": "You do not have permission to perform this action."
+}
+```
+**Case B:** Duplicate Mobile Number The `mobile_number` field acts as the Primary Key and must be unique. Status: 400 Bad Request
+```json
+{
+  "mobile_number": [
+    "chat bot users with this mobile number already exists."
+  ]
+}
+```
+**Case C:** Invalid Mobile Number Format Occurs if the provided number exceeds the character limit. Status: 400 Bad Request
+```json
+{
+  "mobile_number": [
+    "Ensure this field has no more than 20 characters."
+  ]
+}
+```
+**Case D:** Resource Not Found Occurs when trying to access a specific user that does not exist in the database. Status: 404 Not Found
+```json
+{
+  "detail": "Not found."
+}
+```
 ## Data Definitions
 ### User Roles
 
