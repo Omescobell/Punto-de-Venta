@@ -40,7 +40,7 @@ class SupplierTests(APITestCase):
         # Datos de prueba para crear un proveedor
         self.supplier_data = {
             "name": "Proveedor de Prueba S.A.",
-            "mobile_number": "5512345678",
+            "phone_number": "5512345678",
             "contact_person": "Lic. Valeriano",
             "rfc": "XAXX010101000",
             "tax_address": "Calle de las Pruebas 123"
@@ -94,5 +94,5 @@ class SupplierTests(APITestCase):
         supplier = Supplier.objects.first()
         
         # Verificamos campo por campo
-        self.assertEqual(supplier.mobile_number, "5512345678")
+        self.assertEqual(supplier.phone_number, "5512345678")
         self.assertEqual(supplier.tax_address, "Calle de las Pruebas 123")
