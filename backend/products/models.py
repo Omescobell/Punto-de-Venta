@@ -1,10 +1,29 @@
 from django.db import models
 from django.urls import reverse
+from decimal import Decimal
 
 class Product(models.Model):
+    class TaxType(models.TextChoices):
+        GENERAL = '16.00', 'Tasa General (16%)'
+        FRONTIER = '8.00', 'Tasa Fronteriza (8%)'
+        ZERO = '0.00', 'Tasa del 0%'
+        EXEMPT = 'EXENT', 'Exento'
+    
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=30, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    tax_rate = models.CharField(
+        max_length=5,
+        choices=TaxType.choices,
+        default=TaxType.GENERAL
+    )
+
+    final_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        editable=False,
+        default=0.0
+    )
     current_stock = models.IntegerField(default=0)
     reserved_quantity = models.IntegerField(default=0)
     min_stock = models.IntegerField(default=0)
@@ -15,6 +34,19 @@ class Product(models.Model):
         related_name="products"
     )
 
+    def save(self, *args, **kwargs):
+        """Sobrescribimos el método save para calcular el precio antes de guardar"""
+        if self.tax_rate == self.TaxType.EXEMPT:
+            self.final_price = self.price
+        else:
+            tax_decimal = Decimal(self.tax_rate) / Decimal('100')
+            total = self.price * (1 + tax_decimal)
+            # Redondeamos a 2 decimales
+            self.final_price = total.quantize(Decimal('0.01'))
+        
+        # Llamamos al método save original
+        super().save(*args, **kwargs)
+    
     class Meta:
         db_table = 'PRODUCTS'
 
