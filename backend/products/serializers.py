@@ -27,8 +27,23 @@ class PromotionSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     promotions = PromotionSerializer(many=True, read_only=True)
 
+    final_price = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
+    
+    tax_rate_display = serializers.CharField(
+        source='get_tax_rate_display', 
+        read_only=True
+    )
+
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = [
+            'id', 'name', 'sku', 'price', 'tax_rate', 
+            'tax_rate_display', 'final_price', 'current_stock', 
+            'min_stock', 'supplier', 'updated_at', 'promotions'
+        ]
 
     

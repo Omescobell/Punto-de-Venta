@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from suppliers.models import Supplier
 from .models import Product, Promotion
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -30,10 +31,13 @@ class ProductAndPromotionTests(APITestCase):
         self.product = Product.objects.create(
             name="Producto Base",
             sku="SKU-001",
-            price=100.00,
+            price=Decimal('100.00'),
+            tax_rate=Product.TaxType.GENERAL, 
             current_stock=10,
             supplier=self.supplier
         )
+        # Forzamos el guardado para asegurar que se ejecute el cálculo de final_price
+        self.product.save()
 
         # URLs
         self.products_list_url = reverse('product-list')
@@ -41,14 +45,18 @@ class ProductAndPromotionTests(APITestCase):
 
     #! TESTS DE PRODUCTOS
 
-    def test_employee_can_create_product(self):
-        """El empleado SÍ debe poder crear productos (operativo)."""
+    def test_employee_can_create_product_with_tax(self):
+        """
+        El empleado debe poder crear productos y el sistema debe
+        calcular automáticamente el precio final con IVA.
+        """
         self.client.force_authenticate(user=self.employee_user)
         
         data = {
             "name": "Nuevo Producto",
             "sku": "SKU-002",
-            "price": 50.00,
+            "price": "50.00",
+            "tax_rate": "16.00",
             "current_stock": 20,
             "supplier": self.supplier.id
         }
@@ -56,19 +64,76 @@ class ProductAndPromotionTests(APITestCase):
         response = self.client.post(self.products_list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
+        
 
-    def test_employee_can_update_product(self):
-        """El empleado SÍ debe poder editar productos (ej: cambiar stock)."""
+        # 50.00 + 16% = 58.00
+        self.assertEqual(response.data['final_price'], "58.00")
+
+    def test_tax_calculations_logic(self):
+        """
+        Prueba específica para validar las 4 variantes de impuestos
+        directamente en la base de datos.
+        """
+        # 1. Tasa Fronteriza (8%)
+        p_frontier = Product.objects.create(
+            name="Prod Frontera", sku="FRONT-1", price=Decimal("100.00"),
+            tax_rate=Product.TaxType.FRONTIER, supplier=self.supplier
+        )
+        self.assertEqual(p_frontier.final_price, Decimal("108.00"))
+
+        # 2. Tasa Cero (0%)
+        p_zero = Product.objects.create(
+            name="Prod Cero", sku="ZERO-1", price=Decimal("100.00"),
+            tax_rate=Product.TaxType.ZERO, supplier=self.supplier
+        )
+        self.assertEqual(p_zero.final_price, Decimal("100.00"))
+
+        # 3. Exento (Sin impuestos)
+        p_exempt = Product.objects.create(
+            name="Prod Exento", sku="EXEMPT-1", price=Decimal("100.00"),
+            tax_rate=Product.TaxType.EXEMPT, supplier=self.supplier
+        )
+        self.assertEqual(p_exempt.final_price, Decimal("100.00"))
+
+    def test_final_price_is_readonly(self):
+        """
+        SEGURIDAD: Intentar enviar un 'final_price' manual debe ser ignorado.
+        El backend siempre debe recalcularlo.
+        """
+        self.client.force_authenticate(user=self.employee_user)
+        
+        data = {
+            "name": "Intento Hack Precio",
+            "sku": "HACK-001",
+            "price": "100.00",
+            "tax_rate": "16.00",
+            "final_price": "10.00", # Intentamos ponerlo muy barato
+            "supplier": self.supplier.id
+        }
+        
+        response = self.client.post(self.products_list_url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        new_product = Product.objects.get(sku="HACK-001")
+        # El precio final debe ser 116.00
+        self.assertEqual(new_product.final_price, Decimal("116.00"))
+
+    def test_employee_can_update_product_price_recalculates_tax(self):
+        """
+        Al actualizar el precio base, el precio final debe actualizarse solo.
+        """
         self.client.force_authenticate(user=self.employee_user)
         
         url = reverse('product-detail', kwargs={'pk': self.product.id})
-        data = {"price": 150.00}
+        data = {"price": 200.00}
         
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         self.product.refresh_from_db()
-        self.assertEqual(self.product.price, 150.00)
+        self.assertEqual(self.product.price, Decimal("200.00"))
+        # 200 + 16% = 232.00
+        self.assertEqual(self.product.final_price, Decimal("232.00"))
 
     def test_employee_cannot_delete_product(self):
         """SEGURIDAD: El empleado NO puede borrar productos."""
@@ -78,7 +143,6 @@ class ProductAndPromotionTests(APITestCase):
         
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        # El producto debe seguir existiendo
         self.assertTrue(Product.objects.filter(id=self.product.id).exists())
 
     def test_admin_can_delete_product(self):
