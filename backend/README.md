@@ -336,7 +336,6 @@ Allows authenticated users (including Employees) to register and manage customer
 **Response (`201` Created):**
 ```json
 {
-  {
   "id": 1,
   "first_name": "Maria",
   "last_name": "González",
@@ -344,8 +343,10 @@ Allows authenticated users (including Employees) to register and manage customer
   "email": "maria.gonzalez@email.com",
   "birth_date": "1995-08-20",
   "is_frequent": false,
-  "current_points": 0 //Default 0
-  }
+  "current_points": 0,
+  "credit_limit": "2000.00",      // Default for new customers
+  "credit_used": "0.00",
+  "available_credit": "0.00"      // 0.00 because is_frequent is false
 }
 ```
 **Response (`200` OK):**
@@ -359,8 +360,11 @@ Allows authenticated users (including Employees) to register and manage customer
   "phone_number": "5544332211",
   "email": "maria.gonzalez@email.com",
   "birth_date": "1995-08-20",
-  "is_frequent": false,
-  "current_points": 150 
+  "is_frequent": true,            // Status achieved
+  "current_points": 150,
+  "credit_limit": "2000.00",
+  "credit_used": "500.00",
+  "available_credit": "1500.00"   // Calculated: Limit (2000) - Used (500)
 }
 ```
 ### 12. Validation Errors (400 Bad Request)
@@ -399,7 +403,17 @@ Occurs when required fields are omitted or sent as empty strings.
 *   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE`
 
 *   **Access:** Authenticated
+*   **Store Credit Logic:**
 
+    *    `credit_limit`: The maximum amount the store is willing to lend (Default: 2000.00).   Editable by employees.
+
+    *   `credit_used`: The current debt amount.
+
+    *   `available_credit`: Calculated field.
+
+        *   If `is_frequent` is `false`: Available is always 0.00.
+
+        *   If `is_frequent` is `true`: Available is credit_limit - credit_used.
 **Request Body (`PATCH`):**
 ```json
 {
@@ -480,6 +494,37 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
   }
 ]
 ```
+## Credit Managment
+
+### 16. Store Credit 
+Retrieves the financial history of the customer's credit line (charges, payments, and limit changes).
+
+*   **Endpoint**: `/customers/{id}/credit-history/`
+
+*   **Method**: `GET`
+
+*   **Access:** Authenticated
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 45,
+    "amount": "200.00",
+    "transaction_type": "PAYMENT",
+    "description": "Cash payment at register",
+    "created_at": "2023-10-28T10:00:00Z"
+  },
+  {
+    "id": 44,
+    "amount": "500.00",
+    "transaction_type": "CHARGE",
+    "description": "Purchase #1050 (Credit)",
+    "created_at": "2023-10-27T15:30:00Z"
+  }
+]
+```
 
 ## Product Management
 
@@ -489,7 +534,7 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
 
 *   **Admins/Owners:** Have full access, including Delete.
 
-### 16. List & Create Products
+### 17. List & Create Products
 
 Retrieves the product catalog or registers a new item in the inventory.
 
@@ -499,22 +544,57 @@ Retrieves the product catalog or registers a new item in the inventory.
 
 *   **Access:** Authenticated (Any Role)
 
+**Taxes & Pricing**
+
+*   `final_price`: This field is `Read-Only`. It is automatically calculated by the backend based on the price (base) and the tax_rate.
+
+*   `promotions`: This list is `Read-Only`. It shows active promotions associated with the product.
+
 Request Body (POST):
 
 *   **`sku`:** Unique. Stock Keeping Unit identifier.
 
 *   **`supplier`:** ID of the registered supplier.
+
+*   **`tax_rate`:** Determines the tax logic. Use one of the following codes:
+
+    *   "16.00" - Tasa General (Standard 16%)
+
+    *   "8.00" - Tasa Fronteriza (Border 8%)
+
+    *   "0.00" - Tasa del 0% (Zero-rated)
+
+    *   "EXENT" - Exento (Exempt)
 ```json
 {
   "name": "Coca Cola 600ml",
   "sku": "KO-600-MX",
   "price": 18.50,
+  "tax_rate": "16.00",
   "current_stock": 100,
   "min_stock": 10,
   "supplier": 1
 }
 ```
-### 17. Product Details & Stock Reservation
+**Example Response (201 Created):** _Notice `final_price` is calculated (18.50 + 16% = 21.46) and promotions is included._
+
+```json
+{
+  "id": 1,
+  "name": "Coca Cola 600ml",
+  "sku": "KO-600-MX",
+  "price": "18.50",
+  "tax_rate": "16.00",
+  "tax_rate_display": "Tasa General (16%)",
+  "final_price": "21.46",
+  "current_stock": 100,
+  "min_stock": 10,
+  "supplier": 1,
+  "updated_at": "2023-10-27T10:00:00Z",
+  "promotions": []
+}
+```
+### 18. Product Details & Stock Reservation
 
 Operations on a specific product. This includes the special endpoint to manage "Reserved Stock" atomically.
 
@@ -522,7 +602,88 @@ Operations on a specific product. This includes the special endpoint to manage "
 
 *   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE` (`Admin` only)
 
-### 17.1. Reserve or Release Stock
+```json
+{
+  "id": 105,
+  "name": "Coca Cola 600ml",
+  "sku": "KO-600-MX",
+  "price": "18.50",
+  "tax_rate": "16.00",
+  "tax_rate_display": "Tasa General (16%)",
+  "final_price": "21.46", 
+  "current_stock": 100,
+  "min_stock": 10,
+  "reserved_quantity": 5,
+  "supplier": 12,
+  "updated_at": "2023-10-27T15:45:30.123456Z",
+  "promotions": [
+      {
+          "id": 1,
+          "name": "Descuento Verano",
+          "discount_percent": "10.00",
+          "end_date": "2023-11-01"
+      }
+  ]
+}
+```
+
+#### Automatic Price Recalculation (PATCH)
+
+The system guarantees financial integrity by automatically recalculating the final_price in real-time whenever the base price or the tax_rate is modified.
+
+*   **Endpoint**: PATCH `/api/products/{id}/`
+
+**Case A**: Base Price Modification
+
+**Scenario:** The supplier increases the cost price. The system updates the final price while maintaining the existing tax rate (e.g., 16%).
+
+**Request:**
+```json
+{
+  "price": "20.00"
+}
+```
+**Response (200 OK)**: *Notice how `final_price` automatically changes from 21.46 to 23.20 (20.00 + 16%).*
+
+```json
+{
+  "id": 105,
+  "name": "Coca Cola 600ml",
+  "sku": "KO-600-MX",
+  "price": "20.00",            // Updated Value
+  "tax_rate": "16.00",        // Unchanged Value
+  "final_price": "23.20",     // Automatically Recalculated
+  "updated_at": "2023-10-28T09:00:00.000000Z", // Audit Timestamp Updated
+  "...": "..."
+}
+```
+
+**Case B:** Tax Rate Modification
+
+**Scenario:** The product changes fiscal category (e.g., from Standard Rate to Zero Rate).
+
+**Request:**
+```json
+{
+  "tax_rate": "0.00"
+}
+```
+
+**Response (200 OK)**: *The base price remains the same, but the `final_price` becomes equal to the base price as the tax is removed.*
+```json
+{
+  "id": 105,
+  "name": "Coca Cola 600ml",
+  "sku": "KO-600-MX",
+  "price": "20.00",
+  "tax_rate": "0.00",         // Updated Value
+  "tax_rate_display": "Tasa del 0%",
+  "final_price": "20.00",     // Recalculated (20.00 + 0%)
+  "updated_at": "2023-10-28T09:05:00.000000Z",
+  "...": "..."
+}
+```
+### 18.1 Reserve or Release Stock
 
 Used by the POS system when adding items to a cart (Reserve) or cancelling a cart (Release). Prevents race conditions.
 
@@ -579,7 +740,7 @@ _Use a negative number to subtract from the reserved quantity._
 
 *   **Admins/Owners:** Full access (Create/Edit/Delete).
 
-### 18. List & Filter Promotions
+### 19. List & Filter Promotions
 
 To view promotions for a specific product, use the `?product={id}` query parameter.
 
@@ -607,7 +768,7 @@ To view promotions for a specific product, use the `?product={id}` query paramet
   }
 ]
 ```
-### 19. Create & Update Promotions
+### 20. Create & Update Promotions
 
 *   **Endpoint:** `/promotions/` (`Create`) or `/promotions/{id}/` (`Update`)
 
@@ -706,7 +867,7 @@ This module handles the core transactional logic. It uses Atomic Transactions to
 
 *   **Birthday Logic:** Automatically detects if today is the customer's birthday and apply 10% discount.
 
-### 20. List & Create Orders
+### 21. List & Create Orders
 
 Retrieves the sales history or processes a new sale.
 
@@ -783,7 +944,7 @@ _Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automat
 }
 ```
 
-### 21. Order Details & Management
+### 22. Order Details & Management
 
 Retrieves full details of a specific ticket.
 
@@ -803,7 +964,7 @@ Retrieves full details of a specific ticket.
 
 Returns the same structure as the "Create Order" response.
 
-### 22. Order Validation Errors (400 Bad Request)
+### 23. Order Validation Errors (400 Bad Request)
 
 The API performs strict validation on stock levels and business rules before processing any payment.
 
@@ -873,7 +1034,7 @@ The API performs strict validation on stock levels and business rules before pro
 
 *  **Admins/Owners:** Full access (Create/Read/Update/Delete).
 
-### 23. List & Retrieve Users
+### 24. List & Retrieve Users
 
 To view all registered Telegram users or retrieve details for a specific user by their mobile number.
 
@@ -894,7 +1055,7 @@ To view all registered Telegram users or retrieve details for a specific user by
   "last_interaction": "2023-10-27T10:30:00Z"
 }
 ```
-###24. Create & Update Users
+### 25. Create & Update Users
 
 *   **Endpoint:** `/chatbotusers/` (Create) or `/chatbotusers/{mobile_number}/` (Update)
 

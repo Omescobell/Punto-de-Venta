@@ -4,7 +4,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Customer, PointsTransaction
-from .serializers import CustomerSerializer, PointsTransactionSerializer
+from .serializers import CustomerSerializer, PointsTransactionSerializer, CreditTransactionSerializer
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -23,6 +23,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = PointsTransactionSerializer(transactions, many=True)
+        return Response(serializer.data)
+
+    #api/customers/{id}/credit-history/
+    @action(detail=True, methods=['get'], url_path='credit-history')
+    def credit_history(self, request, pk=None):
+        customer = self.get_object()
+        transactions = customer.credit_transactions.all().order_by('-created_at')
+        serializer = CreditTransactionSerializer(transactions, many=True)
         return Response(serializer.data)
     
     # /api/customers/{id}/points/
