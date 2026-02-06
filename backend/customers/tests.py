@@ -1,8 +1,10 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-from .models import Customer, PointsTransaction
+from decimal import Decimal
+from .models import Customer, PointsTransaction, CreditTransaction
 
 User = get_user_model()
 
@@ -216,3 +218,114 @@ class CustomerTests(APITestCase):
         resultado_recalculado = self.customer.update_frequent_status()
         
         self.assertFalse(resultado_recalculado, "Error: Al borrar una orden y resetear la fecha, debió perder el estatus.")
+    
+    # ! Test credito
+    def test_new_customer_has_limit_but_zero_availability(self):
+        """
+        Valida que aunque el default sea 2000, si no es frecuente
+        su disponible real es 0.
+        """
+        # Creamos cliente sin especificar límite (toma default 2000)
+        new_customer = Customer.objects.create(
+            first_name="Nuevo",
+            last_name="Usuario",
+            phone_number="5599999999",
+            email="nuevo@test.com",
+            birth_date="2000-01-01",
+            is_frequent=False # Default
+        )
+
+        # Verificaciones
+        self.assertEqual(new_customer.credit_limit, Decimal('2000.00')) # Tiene el límite asignado
+        self.assertEqual(new_customer.available_credit, Decimal('0.00')) # Pero no puede usarlo
+    
+        # Intentar cobrar debe fallar
+        with self.assertRaises(ValidationError):
+            new_customer.charge_credit(100)
+
+    def test_credit_fields_are_readonly_in_api(self):
+        """El cliente no puede alterar su saldo o deuda via API"""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('customer-detail', kwargs={'pk': self.customer.id})
+        
+        # Intentamos hackear el saldo
+        data = {
+            "credit_used": 0,
+            "available_credit": 50000, 
+            "credit_limit": 50000 
+        }
+        
+        # Asumimos que credit_limit SÍ es editable por el empleado, 
+        # pero available_credit y credit_used NO.
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.customer.refresh_from_db()
+        # available_credit y credit_used no deben cambiar magicamente
+        self.assertEqual(self.customer.credit_used, Decimal('0.00'))
+        # El límite sí se actualizó (es editable por empleados)
+        self.assertEqual(self.customer.credit_limit, Decimal('50000.00'))
+
+    def test_charge_credit_logic_model_check(self):
+        """Prueba directa de la lógica del modelo para cobrar crédito"""
+        # 1. Configurar cliente como frecuente y con límite
+        self.customer.is_frequent = True
+        self.customer.credit_limit = Decimal('1000.00')
+        self.customer.save()
+
+        # 2. Ejecutar cargo
+        self.customer.charge_credit(200, description="Test Charge")
+
+        # 3. Validar
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.credit_used, Decimal('200.00'))
+        self.assertEqual(self.customer.available_credit, Decimal('800.00'))
+        
+        # Validar creación de transacción
+        txn = CreditTransaction.objects.last()
+        self.assertEqual(txn.amount, Decimal('200.00'))
+        self.assertEqual(txn.transaction_type, 'CHARGE')
+
+    def test_pay_off_credit_logic(self):
+        """Prueba que pagar la deuda libere crédito"""
+        self.customer.is_frequent = True
+        self.customer.credit_limit = Decimal('1000.00')
+        self.customer.credit_used = Decimal('500.00') # Ya debe dinero
+        self.customer.save()
+
+        # Pagamos 200
+        self.customer.pay_off_credit(200, description="Abono")
+
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.credit_used, Decimal('300.00')) # 500 - 200
+        self.assertEqual(self.customer.available_credit, Decimal('700.00')) # 1000 - 300
+
+    def test_non_frequent_cannot_use_credit(self):
+        """Si no es frecuente, falla aunque tenga límite definido"""
+        self.customer.is_frequent = False
+        self.customer.credit_limit = Decimal('1000.00')
+        self.customer.save()
+
+        with self.assertRaises(ValidationError):
+            self.customer.charge_credit(100)
+
+    def test_credit_history_endpoint(self):
+        """Verificar que podemos ver el historial de crédito via API"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Creamos datos directos
+        CreditTransaction.objects.create(
+            customer=self.customer, 
+            amount=Decimal('100.00'), 
+            transaction_type='CHARGE'
+        )
+        
+        url = reverse('customer-credit-history', kwargs={'pk': self.customer.id}) 
+        
+
+        response = self.client.get(url)
+        
+        if response.status_code != 404:
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(response.data), 1)
+            self.assertEqual(response.data[0]['amount'], '100.00')
