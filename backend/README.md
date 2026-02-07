@@ -261,7 +261,7 @@ Retrieves a list of all registered suppliers or creates a new one.
 ```json
 {
   "name": "Distribuidora de Bebidas S.A.",
-  "mobile_number": "5512345678",
+  "phone_number": "5512345678",
   "contact_person": "Carlos Rivera",
   "rfc": "DBE101010XYZ",
   "tax_address": "Av. Insurgentes Sur 123, CDMX"
@@ -273,7 +273,7 @@ Retrieves a list of all registered suppliers or creates a new one.
   {
     "id": 1,
     "name": "Distribuidora de Bebidas S.A.",
-    "mobile_number": "5512345678",
+    "phone_number": "5512345678",
     "contact_person": "Carlos Rivera",
     "rfc": "DBE101010XYZ",
     "tax_address": "Av. Insurgentes Sur 123, CDMX"
@@ -298,7 +298,7 @@ Operations on a specific supplier identified by its ID.
 ```json
 {
   "contact_person": "Ana Torres",
-  "mobile_number": "5598765432"
+  "phone_number": "5598765432"
 }
 ```
 **Response (`204` No Content):**
