@@ -1,0 +1,45 @@
+
+.nav-button button {
+    background-color: #2c2c2c;
+    color: #fff;
+}
+
+/* Boton Repetir específico de Promociones */
+.button_replay {
+    border: none;
+    border-radius: 8px;
+    width: 60px; 
+    height: 40px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+    background-color: #2c2c2c;
+    color: #fff;
+}
+
+/* Specific wide add button for Promociones */
+.button_add.wide {
+    width: 220px; 
+    height: 60px;
+    gap: 60px;
+}
+
+
+.button_replay {
+    border: none;
+    border-radius: 8px;
+    width: 60px; 
+    height: 40px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+    background-color: #2c2c2c;
+    color: #fff;
+}
+

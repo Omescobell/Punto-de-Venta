@@ -1,0 +1,226 @@
+/* Ventas specific styles */
+
+.Client_Container {
+    grid-column: 1;
+    display: flex;
+    align-items:baseline;
+    gap: 15px;
+    padding-left: 10%;
+    align-self: flex-start;
+}
+
+.Client {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: white;
+}
+
+/* Sección Derecha: Carrito y Botón Pagar */
+.Product_Container {
+    grid-column: 2;
+    background-color: #f9f9f9; /* Sutil diferencia de fondo */
+    border-left: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px;
+    
+}
+
+.Product_List {
+    text-align: right; /* Productos alineados a la derecha según la imagen */
+    color: #666;
+}
+
+.Product_List div {
+    margin-bottom: 15px;
+}
+
+/* Botón Pagar Estilo Captura */
+.button_add {
+    background-color: #1eb35b !important; /* Verde exacto */
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 1.8rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.2s;
+}
+
+.button_add:hover {
+    transform: scale(1.02);
+    background-color: #17964b !important;
+}
+
+.button_add i::before {
+    font-size: 2.5rem; /* El '+' más grande */
+}
+
+
+.Custom-Modal-Style {
+        background-color: #a8a8a8; 
+        border-radius: 12px;
+        border: none;
+        padding: 2rem;
+    }
+
+    /* Título principal */
+    .Custom-Modal-Style h2 {
+        font-weight: 700;
+        color: #212529;
+        margin-bottom: 2rem;
+    }
+
+    .Text_Total{
+        font-weight: 500;
+        color: #999999;
+        margin-bottom: 1rem;
+    }
+
+    /* Etiquetas de los campos */
+    .Custom-Modal-Style .form-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 4px;
+    }
+
+
+    /* Textarea específico */
+    .Custom-Modal-Style textarea.form-control {
+        height: 100px;
+        resize: none;
+    }
+
+/* Botón Invisible */
+.Invs_btn {
+    background: none;
+    border: none;
+    padding: 20px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #444; /* Color del texto e icono */
+}
+
+/* Tamaño del Icono */
+.Invs_btn i {
+    font-size: 5rem; /* Tamaño grande para el icono */
+    display: block;
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+}
+
+/* Efecto al pasar el mouse (opcional para feedback del usuario) */
+.Invs_btn:hover i {
+    transform: scale(1.1);
+    color: #1eb35b; /* Se pone verde como tu botón de pagar */
+}
+
+.Invs_btn h4 {
+    font-weight: 500;
+}
+
+.pay_input{
+    width:50%;
+    color:#444;
+    height:5%;
+    margin-bottom: 3%;
+
+}
+
+/* --- Loading Modal Styles --- */
+.loading-modal-content {
+    background-color: #ffffff;
+    border-radius: 16px;
+    border: none;
+    padding: 2rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.loading-state h4,
+.success-state h4 {
+    font-weight: 600;
+    color: #333;
+    margin-top: 1.5rem;
+}
+
+/* Checkmark Circle Container */
+.checkmark-circle {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* SVG Checkmark */
+.checkmark {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: #1eb35b;
+    stroke-miterlimit: 10;
+    box-shadow: inset 0px 0px 0px #1eb35b;
+    animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
+}
+
+.checkmark-circle-path {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: #1eb35b;
+    fill: none;
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    stroke: #fff;
+    stroke-width: 3;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+/* Animations */
+@keyframes stroke {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes scale {
+    0%, 100% {
+        transform: none;
+    }
+    50% {
+        transform: scale3d(1.1, 1.1, 1);
+    }
+}
+
+@keyframes fill {
+    100% {
+        box-shadow: inset 0px 0px 0px 50px #1eb35b;
+    }
+}
+
+/* Success Text Color */
+.success-text {
+    color: #1eb35b;
+    font-weight: 700;
+}
+
+/* Spinner personalizado */
+.spinner-border.text-primary {
+    color: #0d6efd !important;
+}
+    
