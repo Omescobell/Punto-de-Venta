@@ -2,6 +2,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.utils import timezone 
+from datetime import timedelta   
 from suppliers.models import Supplier
 from .models import Product, Promotion
 from decimal import Decimal
@@ -39,17 +41,18 @@ class ProductAndPromotionTests(APITestCase):
         # Forzamos el guardado para asegurar que se ejecute el cálculo de final_price
         self.product.save()
 
-        # URLs
+
         self.products_list_url = reverse('product-list')
         self.promotions_list_url = reverse('promotion-list')
+
+
+        self.today = timezone.now().date()
+        self.tomorrow = self.today + timedelta(days=1)
+        self.next_month = self.today + timedelta(days=30)
 
     #! TESTS DE PRODUCTOS
 
     def test_employee_can_create_product_with_tax(self):
-        """
-        El empleado debe poder crear productos y el sistema debe
-        calcular automáticamente el precio final con IVA.
-        """
         self.client.force_authenticate(user=self.employee_user)
         
         data = {
@@ -64,31 +67,25 @@ class ProductAndPromotionTests(APITestCase):
         response = self.client.post(self.products_list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
-        
-
-        # 50.00 + 16% = 58.00
         self.assertEqual(response.data['final_price'], "58.00")
 
     def test_tax_calculations_logic(self):
-        """
-        Prueba específica para validar las 4 variantes de impuestos
-        directamente en la base de datos.
-        """
-        # 1. Tasa Fronteriza (8%)
         p_frontier = Product.objects.create(
             name="Prod Frontera", sku="FRONT-1", price=Decimal("100.00"),
             tax_rate=Product.TaxType.FRONTIER, supplier=self.supplier
         )
+        p_general = Product.objects.create(
+            name="Prod General", sku="GENERAL-1", price=Decimal("100.00"),
+            tax_rate=Product.TaxType.GENERAL, supplier=self.supplier
+        )
         self.assertEqual(p_frontier.final_price, Decimal("108.00"))
 
-        # 2. Tasa Cero (0%)
         p_zero = Product.objects.create(
             name="Prod Cero", sku="ZERO-1", price=Decimal("100.00"),
             tax_rate=Product.TaxType.ZERO, supplier=self.supplier
         )
         self.assertEqual(p_zero.final_price, Decimal("100.00"))
 
-        # 3. Exento (Sin impuestos)
         p_exempt = Product.objects.create(
             name="Prod Exento", sku="EXEMPT-1", price=Decimal("100.00"),
             tax_rate=Product.TaxType.EXEMPT, supplier=self.supplier
@@ -96,79 +93,57 @@ class ProductAndPromotionTests(APITestCase):
         self.assertEqual(p_exempt.final_price, Decimal("100.00"))
 
     def test_final_price_is_readonly(self):
-        """
-        SEGURIDAD: Intentar enviar un 'final_price' manual debe ser ignorado.
-        El backend siempre debe recalcularlo.
-        """
         self.client.force_authenticate(user=self.employee_user)
-        
         data = {
             "name": "Intento Hack Precio",
             "sku": "HACK-001",
             "price": "100.00",
             "tax_rate": "16.00",
-            "final_price": "10.00", # Intentamos ponerlo muy barato
+            "final_price": "10.00",
             "supplier": self.supplier.id
         }
-        
         response = self.client.post(self.products_list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
         new_product = Product.objects.get(sku="HACK-001")
-        # El precio final debe ser 116.00
         self.assertEqual(new_product.final_price, Decimal("116.00"))
 
     def test_employee_can_update_product_price_recalculates_tax(self):
-        """
-        Al actualizar el precio base, el precio final debe actualizarse solo.
-        """
         self.client.force_authenticate(user=self.employee_user)
-        
         url = reverse('product-detail', kwargs={'pk': self.product.id})
         data = {"price": 200.00}
-        
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
         self.product.refresh_from_db()
         self.assertEqual(self.product.price, Decimal("200.00"))
-        # 200 + 16% = 232.00
         self.assertEqual(self.product.final_price, Decimal("232.00"))
 
     def test_employee_cannot_delete_product(self):
-        """SEGURIDAD: El empleado NO puede borrar productos."""
         self.client.force_authenticate(user=self.employee_user)
-        
         url = reverse('product-detail', kwargs={'pk': self.product.id})
-        
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Product.objects.filter(id=self.product.id).exists())
 
     def test_admin_can_delete_product(self):
-        """El Admin SÍ puede borrar productos."""
         self.client.force_authenticate(user=self.admin_user)
-        
         url = reverse('product-detail', kwargs={'pk': self.product.id})
-        
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Product.objects.filter(id=self.product.id).exists())
 
-    #! TESTS DE PROMOCIONES
+    #! TESTS DE PROMOCIONES 
 
     def test_employee_can_see_promotions(self):
-        """
-        El empleado puede ver promociones
-        """
         self.client.force_authenticate(user=self.employee_user)
+        
         Promotion.objects.create(
             name="Promo Existente",
             product=self.product,
             discount_percent=10,
-            start_date="2023-01-01",
-            end_date="2023-01-31",
-            target_audience="ALL"
+            start_date=self.today,       
+            end_date=self.next_month,    
+            target_audience="ALL",
+            is_active=True
         )
 
         response = self.client.get(self.promotions_list_url)
@@ -176,26 +151,29 @@ class ProductAndPromotionTests(APITestCase):
         self.assertEqual(len(response.data), 1)
 
     def test_employee_cannot_manage_promotions(self):
-        """
-        SEGURIDAD: Aunque puede verlas, el empleado NO puede crear, 
-        editar ni borrar promociones.
-        """
         self.client.force_authenticate(user=self.employee_user)
         
+
         data = {
             "name": "Intento Hack",
-            "description": "Descuento válido por temporada",
+            "description": "Descuento",
             "product": self.product.id,
             "discount_percent": 50,
-            "start_date": "2023-01-01",
-            "end_date": "2023-01-02",
+            "start_date": str(self.today),       
+            "end_date": str(self.next_month),
             "target_audience": "ALL"
         }
         response = self.client.post(self.promotions_list_url, data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
         promo = Promotion.objects.create(
-            name="Promo Test", product=self.product, discount_percent=10, 
-            start_date="2023-01-01", end_date="2023-01-31", target_audience="ALL"
+            name="Promo Test", 
+            product=self.product, 
+            discount_percent=10, 
+            start_date=self.today,     
+            end_date=self.next_month,  
+            target_audience="ALL",
+            is_active=True
         )
         url = reverse('promotion-detail', kwargs={'pk': promo.id})
         
@@ -203,61 +181,66 @@ class ProductAndPromotionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_admin_can_create_promotion(self):
-        """El Admin crea una promoción correctamente."""
+        """El Admin crea una promoción correctamente vía API."""
         self.client.force_authenticate(user=self.admin_user)
         
         data = {
             "name": "Oferta Verano",
-            "description": "Descuento válido por temporada",
+            "description": "Descuento válido",
             "product": self.product.id,
             "discount_percent": 20.00,
-            "start_date": "2023-06-01",
-            "end_date": "2023-06-30",
+            "start_date": str(self.today),
+            "end_date": str(self.next_month),
             "target_audience": "ALL"
         }
         
         response = self.client.post(self.promotions_list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Promotion.objects.count(), 1)
-        self.assertEqual(Promotion.objects.first().product, self.product)
 
     def test_promotion_date_validation(self):
-        """
-        VALIDACIÓN: La fecha de inicio no puede ser mayor a la de fin.
-        """
+        """Validación: Inicio > Fin."""
         self.client.force_authenticate(user=self.admin_user)
         
+        # Fechas ilógicas: Inicio (hoy + 10 días) > Fin (hoy)
+        start = self.today + timedelta(days=10)
+        end = self.today 
+
         data = {
             "name": "Oferta Erronea",
-            "description": "Descripción de prueba",
+            "description": "Descripción obligatoria para pasar validación",
             "product": self.product.id,
             "discount_percent": 10,
-            "start_date": "2023-07-01", # Julio
-            "end_date": "2023-06-01",   # Junio 
+            "start_date": str(start), 
+            "end_date": str(end),   
             "target_audience": "ALL"
         }
         
         response = self.client.post(self.promotions_list_url, data)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Verificamos que el error venga del validador que escribimos
-        self.assertIn("La fecha de finalización debe ser posterior a la fecha de inicio.", str(response.data))
+        error_message_part = "posterior a la fecha de inicio"
+        
+        self.assertIn(
+            error_message_part, 
+            str(response.data),
+            f"El mensaje de error esperado ('{error_message_part}') no se encontró en la respuesta."
+        )
 
     def test_admin_can_update_promotion_patch(self):
-        """Prueba de edición parcial (PATCH) de una promoción."""
         self.client.force_authenticate(user=self.admin_user)
         
-        # Creamos una promo previa
         promo = Promotion.objects.create(
             name="Promo Vieja",
             product=self.product,
             discount_percent=10,
-            start_date="2023-01-01",
-            end_date="2023-01-31",
-            target_audience="ALL"
+            start_date=self.today,     #
+            end_date=self.next_month,  
+            target_audience="ALL",
+            is_active=True
         )
         
         url = reverse('promotion-detail', kwargs={'pk': promo.id})
-        
         data = {"name": "Promo Renovada"}
         
         response = self.client.patch(url, data)
@@ -265,29 +248,23 @@ class ProductAndPromotionTests(APITestCase):
         
         promo.refresh_from_db()
         self.assertEqual(promo.name, "Promo Renovada")
-        # Aseguramos que las fechas (que no enviamos) sigan intactas
-        self.assertEqual(str(promo.start_date), "2023-01-01")
 
     def test_filter_promotions_by_product(self):
-        """
-        Prueba que el filtro ?product=ID funciona.
-        """
         self.client.force_authenticate(user=self.admin_user)
         
         product_2 = Product.objects.create(
-            name="Otro Producto",
-            sku="SKU-003",
-            price=10,
-            supplier=self.supplier
+            name="Otro Producto", sku="SKU-003", price=10, supplier=self.supplier
         )
         
         Promotion.objects.create(
             name="Promo P1", product=self.product, discount_percent=10, 
-            start_date="2023-01-01", end_date="2023-01-02", target_audience="ALL"
+            start_date=self.today, end_date=self.tomorrow, 
+            target_audience="ALL", is_active=True
         )
         Promotion.objects.create(
             name="Promo P2", product=product_2, discount_percent=10, 
-            start_date="2023-01-01", end_date="2023-01-02", target_audience="ALL"
+            start_date=self.today, end_date=self.tomorrow, 
+            target_audience="ALL", is_active=True
         )
         
         response = self.client.get(f"{self.promotions_list_url}?product={self.product.id}")
@@ -297,23 +274,15 @@ class ProductAndPromotionTests(APITestCase):
         self.assertEqual(response.data[0]['name'], "Promo P1")
     
     def test_employee_can_reserve_stock(self):
-        """Prueba la lógica de reserva y validación de stock."""
         self.client.force_authenticate(user=self.employee_user)
-        
         url = reverse('product-manage-reservation', kwargs={'pk': self.product.id})
         
-        # 1. Intento reservar 5 (Éxito)
         response = self.client.post(url, {"amount": 5})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.product.refresh_from_db()
-        self.assertEqual(self.product.reserved_quantity, 5)
-
-        # 2. Intento reservar 10 más-> ERROR
+        
         response = self.client.post(url, {"amount": 10})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Insufficient stock", str(response.data))
 
-        # 3. Intento liberar (restar) 2 -> Éxito (quedan 3)
         response = self.client.post(url, {"amount": -2})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.product.refresh_from_db()

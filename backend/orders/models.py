@@ -7,12 +7,17 @@ class Order(models.Model):
     PAYMENT_CHOICES = [
         ('CARD', 'Tarjeta'),
         ('CASH', 'Efectivo'),
+        ('STORE_CREDIT', 'Crédito Tienda'),
+        ('LOYALTY_POINTS', 'Puntos'),       
     ]
-    payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES)
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES)
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0,help_text="Total final con impuestos")
     is_birthday_discount_applied = models.BooleanField(default=False, help_text="Indica si se aplicó descuento de cumpleaños")
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Total antes de impuestos")
+    total_tax = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Total de impuestos (IVA)")
+    points_used = models.IntegerField(default=0)
+    store_credit_used = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     money_saved_total = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
@@ -63,7 +68,8 @@ class OrderItems(models.Model):
     promotion_name = models.CharField(max_length=50, null=True, blank=True)
     unit_price = models.DecimalField(max_digits=10,decimal_places=2)
     discount_amount = models.DecimalField (max_digits=10,decimal_places=2, default=0.00)
-    subtotal = models.DecimalField(max_digits=10,decimal_places=2)
+    amount = models.DecimalField(max_digits=10,decimal_places=2)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Monto de IVA de este ítem")
     order = models.ForeignKey(Order,
                             on_delete=models.CASCADE,
                             related_name="items")
