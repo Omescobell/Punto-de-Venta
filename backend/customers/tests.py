@@ -172,7 +172,7 @@ class CustomerTests(APITestCase):
     
             order = Order.objects.create(
                 ticket_folio=f"OLD-{date_sim.day}",
-                total=100,
+                final_amount=100,
                 status='PAID',
                 customer=self.customer,
                 seller=self.user,

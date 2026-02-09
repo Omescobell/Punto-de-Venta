@@ -4,6 +4,7 @@ from django.db.models.functions import ExtractWeek
 from django.utils import timezone
 from decimal import Decimal
 from django.core.exceptions import ValidationError
+from datetime import timedelta
 
 class Customer(models.Model):
     first_name = models.CharField(max_length=60)
@@ -88,53 +89,68 @@ class Customer(models.Model):
 
     def update_frequent_status(self):
         """
-        Verifica si el cliente compró en TODAS las semanas del mes anterior.
-        Si cumple, se vuelve frecuente. Si no, pierde el estatus.
+        Método público principal: Orquesta la validación del estatus de cliente frecuente.
         """
-        import calendar
-        from datetime import timedelta
-
         today = timezone.now().date()
 
-        #Verificamos si en este mes ya checamos si es frecuente
-        if (self.last_status_check and 
-            self.last_status_check.month == today.month and 
-            self.last_status_check.year == today.year):
+        if self._status_already_checked(today):
             return self.is_frequent
 
-        # Calcular el rango del mes anterior
-        first_day_current_month = today.replace(day=1)
-        last_day_prev_month = first_day_current_month - timedelta(days=1)
-        first_day_prev_month = last_day_prev_month.replace(day=1)
+        start_date, end_date = self._get_previous_month_range(today)
 
-        # Obtener semanas con compras
+        total_weeks_in_month = self._get_iso_weeks_in_range(start_date, end_date)
+        weeks_with_purchases = self._get_purchased_weeks(start_date, end_date)
+
+        is_eligible = len(weeks_with_purchases) >= len(total_weeks_in_month)
+
+        self._save_new_status(is_eligible, today)
+
+        return self.is_frequent
+
+    def _status_already_checked(self, today):
+        """Verifica si la revisión ya se hizo en el mes y año actual."""
+        if not self.last_status_check:
+            return False
+            
+        return (self.last_status_check.month == today.month and 
+                self.last_status_check.year == today.year)
+
+    def _get_previous_month_range(self, today):
+        """Retorna tupla (fecha_inicio, fecha_fin) del mes anterior."""
+        first_day_current = today.replace(day=1)
+        last_day_prev = first_day_current - timedelta(days=1)
+        first_day_prev = last_day_prev.replace(day=1)
+        return first_day_prev, last_day_prev
+
+    def _get_iso_weeks_in_range(self, start_date, end_date):
+        """Devuelve un set con los números de semana ISO contenidos en el rango."""
+        weeks = set()
+        current = start_date
+        while current <= end_date:
+            weeks.add(current.isocalendar()[1])
+            current += timedelta(days=1)
+        return weeks
+
+    def _get_purchased_weeks(self, start_date, end_date):
+        """Devuelve un set de semanas donde hubo órdenes pagadas."""
         order_dates = (
             self.orders.filter(
-                created_at__date__gte=first_day_prev_month,
-                created_at__date__lte=last_day_prev_month,
-                status='PAID' 
+                created_at__date__gte=start_date,
+                created_at__date__lte=end_date,
+                status='PAID'
             )
             .values_list('created_at', flat=True)
         )
-        purchased_weeks = {date.isocalendar()[1] for date in order_dates}
+        # Convertimos cada timestamp a su número de semana
+        return {dt.isocalendar()[1] for dt in order_dates}
 
-        total_weeks_in_month = len(calendar.monthcalendar(first_day_prev_month.year, first_day_prev_month.month))
-
-        total_weeks_set = set()
-        current_date = first_day_prev_month
-        while current_date <= last_day_prev_month:
-            total_weeks_set.add(current_date.isocalendar()[1])
-            current_date += timedelta(days=1)
-
-        is_eligible = len(purchased_weeks) >= len(total_weeks_set)
-
-        if self.is_frequent != is_eligible or self.last_status_check != today:
+    def _save_new_status(self, is_eligible, check_date):
+        """Actualiza el estado solo si cambió o si necesitamos actualizar la fecha de revisión."""
+        if self.is_frequent != is_eligible or self.last_status_check != check_date:
             self.is_frequent = is_eligible
-            self.last_status_check = today # Marcamos que ya revisamos este mes
-            self.save()
-            
-        return self.is_frequent
-    
+            self.last_status_check = check_date
+            self.save(update_fields=['is_frequent', 'last_status_check'])
+
     def accrue_points_from_order(self, order, payment_method, total_amount):
         """
         Calcula y asigna puntos basados en una compra.
