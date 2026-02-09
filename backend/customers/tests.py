@@ -255,8 +255,7 @@ class CustomerTests(APITestCase):
             "credit_limit": 50000 
         }
         
-        # Asumimos que credit_limit SÍ es editable por el empleado, 
-        # pero available_credit y credit_used NO.
+
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
