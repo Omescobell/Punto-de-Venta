@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from django.db.models.functions import ExtractWeek
 from django.utils import timezone
@@ -134,6 +134,37 @@ class Customer(models.Model):
             self.save()
             
         return self.is_frequent
+    
+    def accrue_points_from_order(self, order, payment_method, total_amount):
+        """
+        Calcula y asigna puntos basados en una compra.
+        Valida el método de pago y actualiza el estatus.
+        """
+        VALID_PAYMENT_METHODS = ['CASH', 'CARD']
+        
+        if payment_method not in VALID_PAYMENT_METHODS:
+            return
+
+
+        points_earned = round(Decimal(total_amount) * Decimal(0.01))
+
+        if points_earned > 0: 
+
+            with transaction.atomic():
+                PointsTransaction.objects.create(
+                    customer=self,
+                    amount=points_earned,
+                    transaction_type='EARN',
+                    order=order,
+                    description=f"Puntos compra {order.ticket_folio}"
+                )
+
+                self.current_points = F('current_points') + points_earned
+                self.save()
+                
+                self.refresh_from_db()
+
+                self.update_frequent_status()
     
     class Meta:
         db_table = 'CUSTOMERS'

@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 class Product(models.Model):
@@ -59,6 +60,27 @@ class Product(models.Model):
         
         super().save(*args, **kwargs)
     
+    def reduce_stock(self, quantity, consume_reservation=False):
+        """
+        Reduce el stock físico.
+        :param quantity: Cantidad a restar.
+        :param consume_reservation: Bool. Si es True, también resta de 'reserved_quantity'.
+        """
+        if quantity <= 0:
+            raise ValidationError("La cantidad debe ser mayor a cero.")
+
+        if self.current_stock < quantity:
+            raise ValidationError(f"Stock insuficiente en {self.name}. Disponible: {self.current_stock}")
+
+        if consume_reservation:
+            if self.reserved_quantity < quantity:
+                raise ValidationError(f"No hay suficiente stock reservado para confirmar esta venta en {self.name}.")
+            
+            self.reserved_quantity -= quantity
+
+        self.current_stock -= quantity
+        self.save()
+
     class Meta:
         db_table = 'PRODUCTS'
 
@@ -145,6 +167,28 @@ class Promotion(models.Model):
                 promo.is_active = False 
                 promo.save()
 
+    @classmethod
+    def check_and_activate_promotions(cls):
+        """
+        Revisa todas las promociones activas que sean válidas HOY
+        y fuerza la actualización del precio en el producto.
+        Retorna la cantidad de promociones procesadas.
+        """
+        today = timezone.now().date()
+        
+        active_promos = cls.objects.filter(
+            is_active=True, 
+            start_date__lte=today, 
+            end_date__gte=today
+        )
+
+        count = 0
+        with transaction.atomic():
+            for promo in active_promos:
+                promo.save()
+                count += 1
+        
+        return count
     def __str__(self):
         return f"{self.name} (-{self.discount_percent}%)"
 
