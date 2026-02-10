@@ -5,6 +5,7 @@ from django.utils import timezone
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from datetime import timedelta
+from django.db.models import F
 
 class Customer(models.Model):
     first_name = models.CharField(max_length=60)
