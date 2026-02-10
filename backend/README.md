@@ -749,176 +749,186 @@ Occurs when an Employee tries to delete a product or modify a promotion.
 ```
 ## Order Management (Point of Sale)
 
-This module handles the core transactional logic. It uses Atomic Transactions to ensure data integrity: if any part of the sale fails (e.g., insufficient stock for one item), the entire order is rolled back.
+This module handles the core transactional logic of the system. It is designed to be the "Single Source of Truth" for all financial calculations.
 
-**Key Features:**
+**Technical Integration Notes (Read before implementing Frontend):**
 
-*   **Inventory sync:** Automatically deducts `current_stock` and clears `reserved_quantity`.
+*   **Do NOT Calculate Totals on Client:** The Backend automatically calculates Subtotals, VAT (16%), Discounts (Birthday/Promotions), and Final Totals. The Frontend should only display the values returned by the API.
 
-*   **Loyalty Integration:** Calculates points (1% of total) and updates the customer's level.
+*   **Stock Reservation:** Stock is deducted immediately upon Creating the order (Status: `PENDING`), not when paying. This prevents "overselling" while the client decides how to pay.
 
-*   **Price Snapshot:** Stores the `unit_price` at the moment of sale, preventing historical data changes if catalog prices are updated later.
+*   **Atomic Transactions:** All endpoints use database atomicity. If a payment fails (e.g., insufficient points), the entire transaction rolls back.
 
-*   **Birthday Logic:** Automatically detects if today is the customer's birthday and apply 10% discount.
+*   **Snapshots:** The `unit_price` is saved at the moment of creation. Changing the product price in the catalog later will not affect existing orders.
 
-### 20. List & Create Orders
+**Data Definitions**
 
-Retrieves the sales history or processes a new sale.
+**1. Order Status Lifecycle**
+
+The order flow is strictly unidirectional to ensure audit integrity.
+
+| Status | Description | Transitions Allowed |
+|--------|-------------|---------------------|
+|`Pending`|Default state. Stock is reserved. Waiting for payment.|→ `PAID` or `CANCELLED`
+|`PAID`|Sale completed. Financials recorded. Points awarded.|**Final State** (Cannot be cancelled)|
+|`CANCELLED`|Sale aborted. Stock restored to inventory.|**Final State**|
+
+**2. Payment Methods**
+
+The `payment_method` field triggers specific backend validations:
+
+| Code | Logic Triggered |
+|------|-----------------|
+|`CASH`| Standard processing. |
+|`CARD`| Standard processing (External terminal auth assumed). |
+|`POINTS`| Validation: Checks if `customer.loyalty_points >= total`. Deducts points. |
+|`CREDIT`| Validation: Checks if `(current_debt + total) <= credit_limit`. Increases debt. |
+
+### 20. Create Order (Draft)
+
+Initializes a sale. This endpoint reserves stock and performs all tax/discount calculations.
 
 *   **Endpoint:** `/orders/`
 
-*   **Methods:** `GET`, `POST`
+*   **Method:** `POST`
 
-*   **Access:** Authenticated (All Roles - Employees are allowed to sell)
+*   **Auth:** Authenticated User
 
-**Request Body (POST - New Sale):**
+Request Body:
 
-*   **`customer`:** Optional. `ID` of the registered customer. If omitted, the sale is treated as "Anonymous".
+*   `customer`: (Optional) Integer ID. If omitted, sale is "Anonymous".
 
-*   **`items`:** Required. List of products to purchase.
-
-*   **`promotion_id`:** Optional. ID of a specific promotion to apply to a line item.
+*   `items`: (Required) List of objects with `product_id` and `quantity`.
 
 ```json
 {
-  "customer": 1, 
-  "payment_method": "CASH",
+  "customer": 1,
   "items": [
     {
       "product_id": 15,
-      "quantity": 2,
-      "promotion_id": 5
+      "quantity": 2
     },
     {
       "product_id": 20,
       "quantity": 1
-      // No promotion applied
     }
   ]
 }
 ```
-**Response (201 Created):**
+**Response (201 Created):** Returns the order in `PENDING` status with full financial breakdown.
 
-_Note: The `total`, `ticket_folio`, and `discount_amount` are calculated automatically by the backend._
 ```json
 {
   "id": 102,
   "ticket_folio": "F47AC10B",
+  "status": "PENDING",
   "created_at": "2023-10-27T15:30:00Z",
-  "payment_method": "CASH",
-  "status": "PAID",
-  "seller_name": "employee_juan",
-  "money_saved_total": 20.00,          
-  "discount_applied": 0.07,            
-  "is_birthday_discount_applied": false,
   "customer": 1,
   "customer_name": "Maria González",
-  "total": "270.50",
-  "final_ammount" : "250.50"
+  "subtotal": "200.00",           // Sum of items before tax
+  "total_tax": "32.00",           // Total IVA (16%)
+  "final_amount": "232.00",       // Total to be paid
+  "money_saved_total": "10.00",   // Sum of all discounts
   "items": [
     {
       "product_id": 15,
-      "quantity": 2,
       "product_name": "Coca Cola 600ml",
-      "unit_price": "100.00",
-      "promotion_name": "Summer Sale",
-      "discount_amount": "20.00",
-      "subtotal": "180.00"
-    },
-    {
-      "product_id": 20,
-      "quantity": 1,
-      "product_name": "Chips",
-      "unit_price": "70.50",
-      "promotion_name": null,
-      "discount_amount": "0.00",
-      "subtotal": "70.50"
+      "quantity": 2,
+      "unit_price": "86.21",      // Base Price (Tax exclusive)
+      "tax_amount": "27.58",
+      "discount_amount": "10.00", 
+      "amount": "172.42"          // Line Subtotal
     }
   ]
 }
 ```
 
-### 21. Order Details & Management
+### 21. Process Payment
 
-Retrieves full details of a specific ticket.
+Finalizes the transaction. This confirms the sale and triggers loyalty point accrual or credit debt updates.
 
-**Security Notice:** While Employees can create orders, Updates and Deletions are strictly restricted to `ADMIN` or `OWNER`roles to prevent fraud (e.g., modifying a ticket after payment).
+*   **Endpoint:** `/orders/{id}/pay/`
 
-*   **Endpoint:** `/orders/{id}/`
+*   **Method:** `POST`
 
-*   **Methods:** `GET`, `PUT`, `PATCH`, `DELETE`
+**Request Body:**
+```json
+{
+  "payment_method": "CREDIT" // Options: "CASH", "CARD", "POINTS", "CREDIT"
+}
+```
+Response (200 OK): Updates status to PAID.
+```json
+{
+  "id": 102,
+  "status": "PAID",
+  "payment_method": "CREDIT",
+  "paid_at": "2023-10-27T15:35:00Z",
+  "final_amount": "232.00"
+}
+```
+### 22. Cancel Order (Void)
 
-*   **Access:
+Cancels a `PENDING` order. This is the "Undo" function. It automatically releases the reserved stock back to the global inventory.
 
-       *   **`GET`:** Authenticated (All Roles)
+*   **Endpoint:** `/orders/{id}/cancel/`
 
-       *   **`PUT`/`PATCH`/`DELETE`:** Restricted (`ADMIN` or `OWNER`)
+*   **Method:** `POST`
 
+*   **Constraint:** Cannot cancel an order if status is already `PAID`.
+
+**Request Body: (Empty JSON object allowed)**
+```json
+{}
+```
 **Response (200 OK):**
+```json
+{
+  "status": "Order cancelled",
+  "detail": "La orden 102 fue cancelada y el stock restaurado."
+}
+```
 
-Returns the same structure as the "Create Order" response.
+### 23. Error Handling (400 Bad Request)
 
-### 22. Order Validation Errors (400 Bad Request)
+The frontend should listen for these specific error structures to show user-friendly alerts.
 
-The API performs strict validation on stock levels and business rules before processing any payment.
+**Case A:** Insufficient Stock (On Create) The user tries to buy more items than available.
 
-**Case A:** Insufficient Stock Occurs when the requested quantity exceeds the `current_stock` available in the database. The entire transaction is rejected.
 ```json
 {
   "non_field_errors": [
-    "Stock insuficiente para Producto Test. Disponible: 5"
+    "Stock insuficiente para 'Coca Cola'. Disponible: 5, Solicitado: 10"
   ]
 }
 ```
-**Case B:** Empty Order Occurs when the items list is empty or missing.
+**Case B: Credit Limit Exceeded (On Pay)** *The customer tries to pay with CREDIT but has reached their limit.*
 ```json
 {
-  "items": [
-    "No se puede crear una orden sin productos."
-  ]
+  "detail": "El cliente excede su límite de crédito. Límite: 1000.00, Saldo actual: 950.00, Compra: 200.00"
 }
 ```
-**Case C:** Invalid Quantity Quantities must be positive integers greater than zero.
+**Case C: Insufficient Points (On Pay)** *The customer tries to pay with POINTS but has low balance.*
 ```json
 {
-  "items": [
-    {
-      "quantity": [
-        "La cantidad debe ser al menos 1."
-      ]
-    }
-  ]
+  "detail": "Saldo de puntos insuficiente. Puntos disponibles: 50.00, Total a pagar: 120.00"
 }
 ```
-**Case D:** Integrity Errors Occurs if the provided product_id or customer ID does not exist.
+**Case D: Invalid Cancellation (On Cancel)** *User tries to cancel a paid order.*
 ```json
 {
-  "items": [
-    {
-      "product_id": [
-        "Invalid pk \"9999\" - object does not exist."
-      ]
-    }
+  "non_field_errors": [
+    "No se puede cancelar esta orden. Solo se permiten cancelar órdenes PENDIENTES."
   ]
 }
 ```
 ### Business Logic Notes (Internal Guide)
-
-**Promotions:**
-
-*   The system validates that the promotion is active, within the date range, and matches the product.
-
-*   If target_audience is set to FREQUENT_ONLY, the discount will be silently ignored (set to 0.00) if the customer is not a frequent buyer or if the sale is anonymous.
 
 **Loyalty Points:**
 
 *   Points are calculated as 1% of the total purchase, rounded to the nearest integer.
 
 *   Points are only assigned if a customer is linked to the order.
-
-**Data Snapshots:**
-
-*   The system saves a copy of product_name and unit_price in the OrderItems table. Future changes to the Product Catalog (e.g., price increases) will not affect historical sales records.
 
 ## ChatBot User Management
 
@@ -928,7 +938,7 @@ The API performs strict validation on stock levels and business rules before pro
 
 *  **Admins/Owners:** Full access (Create/Read/Update/Delete).
 
-### 23. List & Retrieve Users
+### 24. List & Retrieve Users
 
 To view all registered Telegram users or retrieve details for a specific user by their mobile number.
 
@@ -949,7 +959,7 @@ To view all registered Telegram users or retrieve details for a specific user by
   "last_interaction": "2023-10-27T10:30:00Z"
 }
 ```
-###24. Create & Update Users
+### 25. Create & Update Users
 
 *   **Endpoint:** `/chatbotusers/` (Create) or `/chatbotusers/{mobile_number}/` (Update)
 

@@ -54,9 +54,9 @@ class Product(models.Model):
         if self.tax_rate == 'EXENT':
             tax = Decimal("0.00")
         else:
-            tax = base_amount * (Decimal(self.tax_rate) / Decimal("100.00"))
+            tax = Decimal(base_amount) * (Decimal(self.tax_rate) / Decimal("100.00"))
             
-        self.final_price = base_amount + tax
+        self.final_price = Decimal(base_amount) + tax
         
         super().save(*args, **kwargs)
     
@@ -124,8 +124,8 @@ class Promotion(models.Model):
         today = timezone.now().date()
         
         if self.is_active and self.start_date <= today <= self.end_date:
-            discount_decimal = self.discount_percent / Decimal("100.00")
-            new_price = self.product.price * (Decimal("1.00") - discount_decimal)
+            discount_decimal = Decimal(self.discount_percent) / Decimal("100.00")
+            new_price = Decimal(self.product.price) * (Decimal("1.00") - discount_decimal)
             
             self.product.discounted_price = new_price
         else:

@@ -10,7 +10,7 @@ class Order(models.Model):
         ('STORE_CREDIT', 'Crédito Tienda'),
         ('LOYALTY_POINTS', 'Puntos'),       
     ]
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, null=True,blank=True)
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0,help_text="Total final con impuestos")
     is_birthday_discount_applied = models.BooleanField(default=False, help_text="Indica si se aplicó descuento de cumpleaños")
@@ -30,7 +30,7 @@ class Order(models.Model):
         ('PENDING', 'Pendiente'),
         ('CANCELED', 'Cancelado'),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PAID') 
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING') 
     created_at = models.DateTimeField(auto_now_add=True)
     
     customer = models.ForeignKey(
