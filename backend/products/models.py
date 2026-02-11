@@ -170,7 +170,7 @@ class Promotion(models.Model):
     def _calculate_discounted_price(self):
         """Calcula matemáticamente el precio con descuento."""
         discount_factor = Decimal(self.discount_percent) / Decimal("100.00")
-        return self.product.price * (Decimal("1.00") - discount_factor)
+        return Decimal(self.product.price) * (Decimal("1.00") - discount_factor)
 
     def _apply_promotion(self):
         """Inyecta los datos de la promoción en el producto."""

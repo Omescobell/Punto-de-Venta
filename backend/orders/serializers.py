@@ -86,6 +86,9 @@ class OrderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         items_payload = validated_data.pop('items')
         user = self.context['request'].user
+
+        Promotion.deactivate_expired()
+        Promotion.check_and_activate_promotions()
         
         order = Order.objects.create(
             seller=user, 
@@ -116,6 +119,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'savings': Decimal("0.00")
         }
 
+        customer = order.customer
+
         for item in items_data:
             product = item['product']
             quantity = item['quantity']
@@ -126,26 +131,28 @@ class OrderSerializer(serializers.ModelSerializer):
             except Exception as e:
                 raise serializers.ValidationError(f"Error de stock: {str(e)}")
 
+            selling_base_price, selling_final_price, promo_name = product_db.get_dynamic_price(customer)
 
-            unit_price = product_db.discounted_price if product_db.discounted_price is not None else product_db.price
+            line_subtotal = selling_base_price * quantity
+            unit_tax = selling_final_price - selling_base_price
+            line_tax = unit_tax * quantity
+
+            unit_saving = product_db.price - selling_base_price
+            line_discount = unit_saving * quantity
             
-            line_subtotal = unit_price * quantity
-
-            tax_rate_decimal = Decimal(product_db.tax_rate) / Decimal('100.00')
-            line_tax = line_subtotal * tax_rate_decimal
-
-            unit_discount = product_db.price - product_db.final_price
-            line_discount = unit_discount * quantity
+            if line_discount < 0:
+                line_discount = Decimal("0.00")
 
             OrderItems.objects.create(
                 order=order,
                 product=product_db,
                 quantity=quantity,
                 product_name=product_db.name,
-                unit_price=unit_price,        # Precio Base Unitario
+                unit_price=selling_base_price,        # Precio Base Unitario
                 amount=line_subtotal,         # Subtotal de la línea (Base)
                 tax_amount=line_tax,          # IVA calculado
-                discount_amount=line_discount # Ahorro del producto
+                discount_amount=line_discount, # Ahorro del producto
+                promotion_name=promo_name
             )
 
             accumulated['subtotal'] += line_subtotal
