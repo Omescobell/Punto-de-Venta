@@ -13,6 +13,7 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "djangorestframework-stubs>=3.16.7",
     "dotenv>=0.9.9",
+    "gunicorn>=25.0.0",
     "jwt>=1.4.0",
     "psycog>=0.0.1",
     "psycopg>=3.3.2",
