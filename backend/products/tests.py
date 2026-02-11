@@ -55,9 +55,6 @@ class BaseTestCase(APITestCase):
             supplier=self.supplier,
             tax_rate="16.00" 
         )
-        
-        self.client.force_authenticate(user=self.admin_user)
-
 
 
 class ProductAndPromotionTests(BaseTestCase):
@@ -153,6 +150,8 @@ class ProductAndPromotionTests(BaseTestCase):
         self.assertTrue(Product.objects.filter(id=self.product.id).exists())
 
     def test_admin_can_delete_product(self):
+        self.client.force_authenticate(user=self.admin_user)
+        
         url = reverse('product-detail', kwargs={'pk': self.product.id})
         
         response = self.client.delete(url)
@@ -410,3 +409,110 @@ class CronJobTests(BaseTestCase):
         self.cron_product.refresh_from_db()
         self.assertEqual(count, 0)
         self.assertIsNone(self.cron_product.discounted_price)
+    
+
+class ProductDynamicPriceTests(BaseTestCase):
+    """
+    Tests enfocados exclusivamente en la lógica de get_dynamic_price
+    y la distinción entre clientes VIP y Normales.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.tomorrow = self.today + timedelta(days=1)
+
+        class MockCustomer:
+            def __init__(self, is_frequent):
+                self.is_frequent = is_frequent
+        
+        self.vip_customer = MockCustomer(is_frequent=True)
+        self.regular_customer = MockCustomer(is_frequent=False)
+
+    def test_promotion_vip_applies_only_to_frequent_customer(self):
+        """
+        Escenario: Promoción configurada como FREQUENT_ONLY.
+        - Cliente Normal: Paga precio COMPLETO (116.00).
+        - Cliente VIP: Paga precio DESCUENTO (104.40).
+        """
+        # 1. Crear Promoción VIP (10% de descuento)
+        Promotion.objects.create(
+            name="Promo VIP Exclusiva",
+            product=self.product,
+            discount_percent=10, # Precio base bajará a 90.00
+            start_date=self.today,
+            end_date=self.tomorrow,
+            target_audience="FREQUENT_ONLY", # <--- EL FILTRO
+            is_active=True
+        )
+        
+        # Refrescamos para que el producto tenga los campos cacheados actualizados
+        self.product.refresh_from_db()
+
+        # A. Verificar Cliente Normal
+        # Debe ignorar la promo y calcular impuestos sobre 100
+        base_normal, final_normal, name_normal = self.product.get_dynamic_price(self.regular_customer)
+        
+        self.assertEqual(base_normal, Decimal("100.00"))
+        self.assertEqual(final_normal, Decimal("116.00")) # 100 + 16% IVA
+        self.assertIsNone(name_normal)
+
+        # B. Verificar Cliente VIP
+        # Debe aplicar la promo: Base 90 + 16% IVA = 104.40
+        base_vip, final_vip, name_vip = self.product.get_dynamic_price(self.vip_customer)
+        
+        self.assertEqual(base_vip, Decimal("90.00"))
+        self.assertEqual(final_vip, Decimal("104.40"))
+        self.assertEqual(name_vip, "Promo VIP Exclusiva")
+
+    def test_promotion_general_applies_to_everyone(self):
+        """
+        Escenario: Promoción configurada como ALL (Todos).
+        - Cliente Normal: Paga precio DESCUENTO.
+        - Cliente VIP: Paga precio DESCUENTO.
+        """
+        Promotion.objects.create(
+            name="Promo General Verano",
+            product=self.product,
+            discount_percent=20, # Precio base bajará a 80.00
+            start_date=self.today,
+            end_date=self.tomorrow,
+            target_audience="ALL", # <--- PARA TODOS
+            is_active=True
+        )
+        self.product.refresh_from_db()
+
+        # Cálculo esperado: 80 + 16% = 92.80
+        expected_final = Decimal("92.80")
+
+        # A. Cliente Normal
+        base_n, final_n, name_n = self.product.get_dynamic_price(self.regular_customer)
+        self.assertEqual(final_n, expected_final)
+        self.assertEqual(name_n, "Promo General Verano")
+
+        # B. Cliente VIP
+        base_v, final_v, name_v = self.product.get_dynamic_price(self.vip_customer)
+        self.assertEqual(final_v, expected_final)
+
+    def test_dynamic_price_without_customer_instance(self):
+        """
+        Escenario: Se llama a get_dynamic_price(None), por ejemplo en una vista pública.
+        Si la promo es VIP, se debe mostrar precio normal.
+        """
+        Promotion.objects.create(
+            name="Promo VIP Oculta",
+            product=self.product,
+            discount_percent=50,
+            start_date=self.today,
+            end_date=self.tomorrow,
+            target_audience="FREQUENT_ONLY",
+            is_active=True
+        )
+        self.product.refresh_from_db()
+
+        # Sin cliente (None)
+        base, final, name = self.product.get_dynamic_price(None)
+
+        # Debe negar la oferta
+        self.assertEqual(base, Decimal("100.00"))
+        self.assertEqual(final, Decimal("116.00"))
+        self.assertIsNone(name)

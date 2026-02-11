@@ -34,6 +34,13 @@ class Product(models.Model):
         editable=False,
         default=0.0
     )
+    promo_requires_frequent_customer = models.BooleanField(
+        default=False,
+        help_text="Si está activo, solo aplica para clientes marcados como frecuentes."
+    )
+    active_promotion = models.ForeignKey(
+        'products.Promotion', null=True, blank=True, on_delete=models.SET_NULL, related_name='active_on_products'
+    )
     current_stock = models.IntegerField(default=0)
     reserved_quantity = models.IntegerField(default=0)
     min_stock = models.IntegerField(default=0)
@@ -44,6 +51,21 @@ class Product(models.Model):
         related_name="products"
     )
 
+    def _calculate_taxed_price(self, amount):
+        """
+        Recibe un monto base y le aplica la lógica de impuestos del producto.
+        Retorna: Decimal con el monto final.
+        """
+        if amount is None:
+            return Decimal("0.00")
+
+        if self.tax_rate == 'EXENT':
+            return Decimal(amount)
+        
+        tax_multiplier = Decimal(self.tax_rate) / Decimal("100.00")
+        
+        return Decimal(amount) * (Decimal("1.00") + tax_multiplier)
+    
     def save(self, *args, **kwargs):
         """
         Calcular el precio del producto cada que se haga un cambio
@@ -51,12 +73,7 @@ class Product(models.Model):
         """
         base_amount = self.discounted_price if self.discounted_price is not None else self.price
         
-        if self.tax_rate == 'EXENT':
-            tax = Decimal("0.00")
-        else:
-            tax = Decimal(base_amount) * (Decimal(self.tax_rate) / Decimal("100.00"))
-            
-        self.final_price = Decimal(base_amount) + tax
+        self.final_price = self._calculate_taxed_price(base_amount)
         
         super().save(*args, **kwargs)
     
@@ -80,6 +97,28 @@ class Product(models.Model):
 
         self.current_stock -= quantity
         self.save()
+    
+    def get_dynamic_price(self, customer=None):
+        """
+        Calcula el precio real de venta al momento.
+        Retorna: (precio_base_reporte, precio_final_cobrar, nombre_promocion)
+        """
+        #NO HAY PROMOCIÓN
+        if self.discounted_price is None:
+            return self.price, self.final_price, None
+
+        promo_name = self.active_promotion.name if self.active_promotion else "Oferta"
+
+        #PROMOCION CLIENTE FRECUENTE
+        if self.promo_requires_frequent_customer:
+            if customer and customer.is_frequent:
+                return self.discounted_price,self.final_price, promo_name
+            else:
+                final_price_normal = self._calculate_taxed_price(self.price)
+                return self.price, final_price_normal, None
+
+        #PROMOCIÓN GENERAL
+        return self.discounted_price, self.final_price, promo_name
 
     class Meta:
         db_table = 'PRODUCTS'
@@ -113,38 +152,61 @@ class Promotion(models.Model):
     class Meta:
         db_table = 'PROMOTIONS' 
 
-    def save(self, *args, **kwargs):
-        # 1. Guardar la promoción primero 
-        super().save(*args, **kwargs)
-        
-        self._apply_promotion_to_product()
-
-    def _apply_promotion_to_product(self):
-        """Calcula el descuento y lo INYECTA en el producto."""
-        today = timezone.now().date()
-        
-        if self.is_active and self.start_date <= today <= self.end_date:
-            discount_decimal = Decimal(self.discount_percent) / Decimal("100.00")
-            new_price = Decimal(self.product.price) * (Decimal("1.00") - discount_decimal)
-            
-            self.product.discounted_price = new_price
+    def sync_product_price(self):
+        """
+        Orquestador principal: Decide si aplicar o quitar la promoción
+        basado en su validez actual.
+        """
+        if self.is_valid_today():
+            self._apply_promotion()
         else:
-            self.product.discounted_price = None
+            self._remove_promotion()
 
-        # Al guardar el producto recalculará sus impuestos
+    def is_valid_today(self):
+        """Retorna True si la promoción está activa y dentro del rango de fechas hoy."""
+        today = timezone.now().date()
+        return self.is_active and (self.start_date <= today <= self.end_date)
+
+    def _calculate_discounted_price(self):
+        """Calcula matemáticamente el precio con descuento."""
+        discount_factor = Decimal(self.discount_percent) / Decimal("100.00")
+        return self.product.price * (Decimal("1.00") - discount_factor)
+
+    def _apply_promotion(self):
+        """Inyecta los datos de la promoción en el producto."""
+        new_price = self._calculate_discounted_price()
+        
+        self.product.discounted_price = new_price
+        self.product.active_promotion = self
+        
+        # Mapeo de target_audience a booleano
+        self.product.promo_requires_frequent_customer = (self.target_audience == 'FREQUENT_ONLY')
+        
         self.product.save()
-    
-    def delete(self, *args, **kwargs):
-        # Si borran la promo, limpiamos el producto antes de morir
-        product_ref = self.product
-        super().delete(*args, **kwargs)
-        self._reset_product_price(product_ref)
 
-    @staticmethod
-    def _reset_product_price(product):
-        """Helper estático para limpiar un producto sin instancia de promo activa."""
-        product.discounted_price = None
-        product.save()
+    def _remove_promotion(self):
+        """Limpia los datos del producto SOLO si esta es la promoción activa."""
+        if self.product.active_promotion_id == self.pk:
+            self.product.discounted_price = None
+            self.product.active_promotion = None
+            self.product.promo_requires_frequent_customer = False
+            
+            self.product.save()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        self.sync_product_price()
+
+    def delete(self, *args, **kwargs):
+        # Si borran la promo, limpiamos el producto antes de que desaparezca la instancia
+        if self.product.active_promotion_id == self.pk:
+            self.product.discounted_price = None
+            self.product.active_promotion = None
+            self.product.requires_frequent_customer = False
+            self.product.save()
+            
+        super().delete(*args, **kwargs)
     
     @classmethod
     def deactivate_expired(cls):
@@ -189,6 +251,4 @@ class Promotion(models.Model):
                 count += 1
         
         return count
-    def __str__(self):
-        return f"{self.name} (-{self.discount_percent}%)"
 
