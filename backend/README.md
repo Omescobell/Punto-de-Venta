@@ -511,9 +511,9 @@ Retrieves the product catalog or registers a new item in the inventory.
 
 **Supported Tax Rates (`tax_rate`):**
 
-*   `"0.16"`: IVA General (16%)
+*   `"16.00"`: IVA General (16%)
 
-*   `"0.08"`: IVA Fronterizo (8%)
+*   `"8.00"`: IVA Fronterizo (8%)
 
 *   `"0.00"`: Tasa Cero (0%)
 
