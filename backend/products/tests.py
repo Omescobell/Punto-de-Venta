@@ -3,12 +3,16 @@ from rest_framework import status
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.utils import timezone 
-from datetime import date, timedelta   
+from django.utils import timezone   
 from decimal import Decimal
+from django.test import TestCase
+from datetime import timedelta
 
+from django.core.management import call_command
 from suppliers.models import Supplier
 from .models import Product, Promotion
+from orders.models import Order, OrderItems
+
 
 User = get_user_model()
 
@@ -516,3 +520,50 @@ class ProductDynamicPriceTests(BaseTestCase):
         self.assertEqual(base, Decimal("100.00"))
         self.assertEqual(final, Decimal("116.00"))
         self.assertIsNone(name)
+
+class LowStockTriggerTest(TestCase):
+    
+    def setUp(self):
+        self.supplier = Supplier.objects.create(name="Prov Test", phone_number="555")
+        self.producto = Product.objects.create(
+            name="Coca Cola",
+            current_stock=50,      # Stock actual: 50
+            low_stock=False,
+            price=Decimal("15.00"),
+            supplier=self.supplier
+        )
+
+    def test_low_stock_se_activa_via_comando(self):
+        """
+        Prueba INTEGRAL: Simula que son las 12 AM y se corre el comando.
+        """
+        # 1. Preparar fecha del mes pasado
+        today = timezone.localtime(timezone.now())
+        first_this_month = today.replace(day=1)
+        fecha_mes_pasado = first_this_month - timedelta(days=15)
+
+        # 2. Crear Venta Masiva en el pasado (100 unidades)
+        order = Order.objects.create(status='PAID', subtotal=1500, final_amount=1500)
+        order.created_at = fecha_mes_pasado
+        order.save()
+
+        OrderItems.objects.create(
+            order=order,
+            product=self.producto,
+            quantity=100, # Vendimos 100
+            product_name=self.producto.name,
+            unit_price=self.producto.price,
+            amount=1500
+        )
+
+        # 3. EJECUTAR EL COMANDO (Lo que haría el Cron Job)
+        # Asegúrate de que el archivo se llame 'update_low_stock.py' en management/commands/
+        call_command('update_low_stock')
+
+        # 4. Verificar resultado
+        self.producto.refresh_from_db()
+        
+        self.assertTrue(
+            self.producto.low_stock, 
+            "El comando debió detectar que 100 ventas > 50 stock y activar la alerta."
+        )
