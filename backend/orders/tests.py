@@ -30,7 +30,7 @@ class SaleProcessTests(APITestCase):
             current_stock=10, reserved_quantity=5, supplier=supplier, tax_rate='0.00'
         )
 
-        # ¡OJO! Esta promoción se aplica automáticamente en todos los tests si no se desactiva.
+        # Esta promoción se aplica automáticamente en todos los tests si no se desactiva.
         # Reduce el precio a $90.
         self.promotion = Promotion.objects.create(
             name="Desc 10%", 
@@ -70,8 +70,6 @@ class SaleProcessTests(APITestCase):
                     "product_id": self.product.id,
                     "quantity": 2
                     # No enviamos promotion_id explícito, el sistema debería detectarlo
-                    # o si tu lógica requiere enviarlo, asegúrate de que el serializer lo maneje.
-                    # Asumiendo que product.final_price ya trae el descuento.
                 }
             ]
         }
