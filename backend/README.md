@@ -489,6 +489,10 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
 
 *   **Admins/Owners:** Have full access, including Delete.
 
+**Features**
+
+*   **Low Stock**: The system automatically updates the `low_stock` field. 
+
 ### 16. List & Create Products
 
 Retrieves the product catalog or registers a new item in the inventory.
@@ -527,7 +531,6 @@ Request Body (POST):
   "price": "18.50",       // Base price
   "tax_rate": "0.16",     // 16% IVA
   "current_stock": 100,
-  "min_stock": 10,
   "supplier": 1
 }
 ```
