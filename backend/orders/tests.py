@@ -1,5 +1,6 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
+from django.utils import timezone
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from products.models import Product, Promotion
@@ -137,7 +138,7 @@ class SaleProcessTests(APITestCase):
         self.promotion.save()
 
         # 2. Configurar cumpleaños HOY
-        today = date.today()
+        today = timezone.now().date()
         self.customer.birth_date = today.replace(year=1990)
         self.customer.last_birthday_discount_year = None 
         self.customer.save()
@@ -169,7 +170,7 @@ class SaleProcessTests(APITestCase):
         self.client.force_authenticate(user=self.seller)
 
         # 1. Configurar Cumpleaños
-        today = date.today()
+        today = timezone.now().date()
         self.customer.birth_date = today.replace(year=1990)
         self.customer.last_birthday_discount_year = None
         self.customer.save()
