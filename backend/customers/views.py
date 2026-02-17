@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -73,3 +74,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "new_balance": customer.current_points
         }, status=status.HTTP_201_CREATED)
     
+    # /api/customers/{id}/pay-credit/
+    @action(detail=True, methods=['post'], url_path='pay-credit')
+    def pay_credit(self, request, pk=None):
+        customer = self.get_object()
+        amount = request.data.get('amount')
+        description = request.data.get('description', 'Abono a deuda')
+
+        if not amount:
+            return Response({"error": "El campo 'amount' es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Llamamos al método del modelo que ya programaste
+            customer.pay_off_credit(amount, description=description)
+            return Response({
+                "status": "success",
+                "new_credit_used": customer.credit_used,
+                "available_credit": customer.available_credit
+            }, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        

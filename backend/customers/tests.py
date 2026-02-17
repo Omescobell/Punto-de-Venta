@@ -328,3 +328,68 @@ class CustomerTests(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(len(response.data), 1)
             self.assertEqual(response.data[0]['amount'], '100.00')
+    
+    def test_pay_credit_endpoint_success(self):
+        """Valida que la ruta /pay-credit/ funcione correctamente vía API"""
+        self.client.force_authenticate(user=self.user)
+        
+        # 1. Preparar cliente con deuda
+        self.customer.is_frequent = True
+        self.customer.credit_limit = Decimal('1000.00')
+        self.customer.credit_used = Decimal('500.00')
+        self.customer.save()
+
+        url = reverse('customer-pay-credit', kwargs={'pk': self.customer.id})
+        data = {
+            "amount": 200.00,
+            "description": "Abono desde API"
+        }
+
+        # 2. Ejecutar POST a la API
+        response = self.client.post(url, data, format='json')
+
+        # 3. Verificaciones
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.customer.refresh_from_db()
+        
+        # Validar que el saldo se actualizó en la BD
+        self.assertEqual(self.customer.credit_used, Decimal('300.00'))
+        
+        # Validar respuesta JSON
+        self.assertEqual(Decimal(str(response.data['new_credit_used'])), Decimal('300.00'))
+        self.assertEqual(Decimal(str(response.data['available_credit'])), Decimal('700.00'))
+
+    def test_pay_credit_endpoint_invalid_amount(self):
+        """Valida que la API rechace montos negativos o vacíos"""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('customer-pay-credit', kwargs={'pk': self.customer.id})
+        
+        # Caso A: Monto faltante
+        response = self.client.post(url, {"description": "Sin monto"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+        # Caso B: Monto negativo (asumiendo que tu modelo lanza ValidationError)
+        response = self.client.post(url, {"amount": -100}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_credit_history_includes_new_payment(self):
+        """Valida que tras pagar vía API, el movimiento aparezca en el historial"""
+        self.client.force_authenticate(user=self.user)
+        
+        # 1. Realizar el pago vía API
+        pay_url = reverse('customer-pay-credit', kwargs={'pk': self.customer.id})
+        self.client.post(pay_url, {"amount": 150.00, "description": "Pago Historial"}, format='json')
+
+        # 2. Consultar historial
+        history_url = reverse('customer-credit-history', kwargs={'pk': self.customer.id})
+        response = self.client.get(history_url)
+
+        # 3. Verificar que el pago aparece en la lista
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Buscamos si existe una transacción tipo 'PAYMENT' con el monto correcto
+        payment_txn = any(
+            txn['transaction_type'] == 'PAYMENT' and Decimal(txn['amount']) == Decimal('150.00') 
+            for txn in response.data
+        )
+        self.assertTrue(payment_txn, "El abono realizado no aparece en el historial de crédito")
