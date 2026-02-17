@@ -7,7 +7,7 @@ User = get_user_model()
 class BaseUserTest(APITestCase):
     def setUp(self):
         # Datos base para todas las pruebas
-        self.login_url = '/auth/login/'
+        self.login_url = '/api/auth/login/'
         self.users_list_url = '/api/users/' 
         self.users_me_url = '/api/users/me/'
 
