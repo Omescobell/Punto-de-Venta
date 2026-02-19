@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
@@ -9,24 +9,73 @@ const Promociones = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBirthdayModal, setShowBirthdayModal] = useState(false);
 
-  // State for Add Promotion Form
-  const [promoData, setPromoData] = useState({
+  // Data State
+  const [promotions, setPromotions] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Form State
+  const initialPromoState = {
     name: '',
     description: '',
-    accessLevel: '',
-    discount: '',
-    activeDay: '',
-    activeMonth: '',
-    activeYear: '',
+    target_audience: 'ALL', // Maps to 'accessLevel'
+    discount_percent: '',
+    start_date: '',
+    end_date: '',
     product: ''
-  });
+  };
 
-  // State for Birthday Config Form
+  const [promoData, setPromoData] = useState(initialPromoState);
+
+  // Birthday Config (UI Only for now)
   const [birthdayData, setBirthdayData] = useState({
     type: '',
     minSpend: '',
     discount: ''
   });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('No hay sesión activa');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      
+      const [promosRes, prodsRes] = await Promise.all([
+        fetch('/api/promotions/', { headers }),
+        fetch('/api/products/', { headers })
+      ]);
+
+      if (promosRes.ok) {
+        const data = await promosRes.json();
+        setPromotions(Array.isArray(data) ? data : []);
+      } else {
+        // If 403, maybe not admin?
+        if (promosRes.status === 403) throw new Error('No tiene permisos para ver promociones');
+      }
+
+      if (prodsRes.ok) {
+        const data = await prodsRes.json();
+        setProducts(Array.isArray(data) ? data : []);
+      }
+
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePromoChange = (e) => {
     const { id, value } = e.target;
@@ -44,17 +93,86 @@ const Promociones = () => {
     }));
   };
 
-  const handlePromoSubmit = (e) => {
+  const handlePromoSubmit = async (e) => {
     e.preventDefault();
-    console.log('Promotion Data:', promoData);
-    setShowAddModal(false);
+    if (!promoData.name || !promoData.product || !promoData.discount_percent || !promoData.start_date || !promoData.end_date) {
+      alert('Por favor complete los campos obligatorios');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('/api/promotions/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(promoData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPromotions(prev => [...prev, data]);
+        setShowAddModal(false);
+        setPromoData(initialPromoState);
+        alert('Promoción creada correctamente');
+      } else {
+        console.error('Error creating promotion:', data);
+        const errorMessage = Object.values(data).flat().join('\n') || 'Error al crear promoción';
+        alert(errorMessage);
+      }
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      alert('Error de conexión');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Está seguro de eliminar esta promoción?')) return;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`/api/promotions/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setPromotions(prev => prev.filter(p => p.id !== id));
+      } else {
+        const data = await response.json();
+        alert(data.detail || 'Error al eliminar promoción');
+      }
+    } catch (err) {
+      console.error('Error deleting promotion:', err);
+      alert('Error de conexión');
+    }
   };
 
   const handleBirthdaySubmit = (e) => {
     e.preventDefault();
+    // Placeholder: No backend endpoint yet
     console.log('Birthday Config:', birthdayData);
     setShowBirthdayModal(false);
+    alert('Configuración guardada (Localmente)');
   };
+
+  const getProductName = (id) => {
+    const product = products.find(p => p.id === id);
+    return product ? product.name : 'Desconocido';
+  };
+
+  const filteredPromotions = promotions.filter(promo => {
+    const search = searchTerm.toLowerCase();
+    return (
+      (promo.name || '').toLowerCase().includes(search) ||
+      (promo.description || '').toLowerCase().includes(search)
+    );
+  });
 
   return (
     <>
@@ -69,36 +187,50 @@ const Promociones = () => {
           />
           <div className="d-flex gap-3">
             <button className="button_add wide" onClick={() => setShowAddModal(true)}>
-              Agregar Promoción
+              Promoción
               <i className="bi bi-plus-lg"></i>
             </button>
-            <button className="button_replay" onClick={() => setShowBirthdayModal(true)}>
-              <i className="bi bi-arrow-counterclockwise"></i>
+            <button className="button_add wide" style={{ backgroundColor: '#6c757d' }} onClick={() => setShowBirthdayModal(true)}>
+              <i className="bi bi-gift"></i>
             </button>
           </div>
         </div>
 
         <div className="Table-Wrapper">
+          {error && <div className="alert alert-danger m-3">{error}</div>}
+          
           <table className="table table-bordered Custom-Table">
             <thead>
               <tr>
+                <th>Nombre</th>
                 <th>Periodo</th>
                 <th>Descuento</th>
-                <th>Productos</th>
+                <th>Producto</th>
+                <th>Clientes</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>01/01/2024 - 31/01/2024</td>
-                <td>10%</td>
-                <td>Producto A, Producto B</td>
-                <ActionButtons 
-                  onEdit={() => console.log('Edit')} 
-                  onDelete={() => console.log('Delete')} 
-                />
-              </tr>
-              {/* Only show rows with data */}
+              {loading ? (
+                <tr><td colSpan="6" className="text-center">Cargando...</td></tr>
+              ) : filteredPromotions.length === 0 ? (
+                <tr><td colSpan="6" className="text-center">No se encontraron promociones activas</td></tr>
+              ) : (
+                filteredPromotions.map(promo => (
+                  <tr key={promo.id}>
+                    <td>{promo.name}</td>
+                    <td>{promo.start_date} - {promo.end_date}</td>
+                    <td>{Number(promo.discount_percent).toFixed(0)}%</td>
+                    <td>{getProductName(promo.product)}</td>
+                    <td>{promo.target_audience === 'ALL' ? 'Todos' : 'Frecuentes'}</td>
+                    <ActionButtons>
+                      <button className="button_delete" onClick={() => handleDelete(promo.id)} title="Eliminar">
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </ActionButtons>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -106,7 +238,7 @@ const Promociones = () => {
 
       {/* Add Promotion Modal */}
       <div className={`modal fade ${showAddModal ? 'show' : ''}`} 
-           style={{ display: showAddModal ? 'block' : 'none' }}
+           style={{ display: showAddModal ? 'block' : 'none', backgroundColor: 'rgba(0,0,0,0.5)' }}
            tabIndex="-1">
         <div className="modal-dialog modal-dialog-centered modal-lg">
           <div className="modal-content Custom-Modal-Style">
@@ -116,13 +248,14 @@ const Promociones = () => {
               <form onSubmit={handlePromoSubmit}>
                 <div className="row mb-3">
                   <div className="col-md-6">
-                    <label htmlFor="name" className="form-label">Nombre</label>
+                    <label htmlFor="name" className="form-label">Nombre *</label>
                     <input 
                       type="text" 
                       className="form-control" 
                       id="name"
                       value={promoData.name}
                       onChange={handlePromoChange}
+                      required
                     />
                   </div>
                   <div className="col-md-6">
@@ -139,74 +272,65 @@ const Promociones = () => {
 
                 <div className="row mb-3">
                   <div className="col-md-6">
-                    <label htmlFor="accessLevel" className="form-label">Clientes</label>
+                    <label htmlFor="target_audience" className="form-label">Clientes</label>
                     <select 
                       className="form-select" 
-                      id="accessLevel"
-                      value={promoData.accessLevel}
+                      id="target_audience"
+                      value={promoData.target_audience}
                       onChange={handlePromoChange}
                     >
-                      <option value="">Seleccionar...</option>
-                      <option value="all">Todos</option>
-                      <option value="vip">Premium</option>
+                      <option value="ALL">Todos</option>
+                      <option value="FREQUENT_ONLY">Solo Frecuentes</option>
                     </select>
                   </div>
                   <div className="col-md-6">
-                    <label htmlFor="discount" className="form-label">Descuento (%)</label>
+                    <label htmlFor="discount_percent" className="form-label">Descuento (%) *</label>
                     <input 
                       type="number" 
                       className="form-control" 
-                      id="discount"
-                      value={promoData.discount}
+                      id="discount_percent"
+                      value={promoData.discount_percent}
                       onChange={handlePromoChange}
+                      required
                     />
                   </div>
                 </div>
 
                 <div className="row mb-4">
                   <div className="col-md-6">
-                    <label className="form-label">Activo hasta</label>
+                    <label className="form-label">Vigencia (Inicio - Fin) *</label>
                     <div className="d-flex gap-2">
                        <input 
-                        type="text" 
-                        className="form-control text-center" 
-                        placeholder="DD" 
-                        id="activeDay"
-                        style={{ width: '60px' }}
-                        value={promoData.activeDay}
+                        type="date" 
+                        className="form-control" 
+                        id="start_date"
+                        value={promoData.start_date}
                         onChange={handlePromoChange}
+                        required
                       />
                       <input 
-                        type="text" 
-                        className="form-control text-center" 
-                        placeholder="MM" 
-                        id="activeMonth"
-                        style={{ width: '60px' }}
-                        value={promoData.activeMonth}
+                        type="date" 
+                        className="form-control" 
+                        id="end_date"
+                        value={promoData.end_date}
                         onChange={handlePromoChange}
-                      />
-                      <input 
-                        type="text" 
-                        className="form-control text-center" 
-                        placeholder="AAAA" 
-                        id="activeYear"
-                        style={{ width: '80px' }}
-                        value={promoData.activeYear}
-                        onChange={handlePromoChange}
+                        required
                       />
                     </div>
                   </div>
                   <div className="col-md-6">
-                    <label htmlFor="product" className="form-label">Producto</label>
+                    <label htmlFor="product" className="form-label">Producto *</label>
                     <select 
                       className="form-select" 
                       id="product"
                       value={promoData.product}
                       onChange={handlePromoChange}
+                      required
                     >
                       <option value="">Seleccionar...</option>
-                      <option value="1">Producto A</option>
-                      <option value="2">Producto B</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} (SKU: {p.sku})</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -218,12 +342,11 @@ const Promociones = () => {
             </div>
           </div>
         </div>
-        {showAddModal && <div className="modal-backdrop fade show" onClick={() => setShowAddModal(false)}></div>}
       </div>
 
       {/* Birthday Config Modal */}
       <div className={`modal fade ${showBirthdayModal ? 'show' : ''}`} 
-           style={{ display: showBirthdayModal ? 'block' : 'none' }}
+           style={{ display: showBirthdayModal ? 'block' : 'none', backgroundColor: 'rgba(0,0,0,0.5)' }}
            tabIndex="-1">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content Custom-Modal-Style">
@@ -232,50 +355,20 @@ const Promociones = () => {
               
               <form onSubmit={handleBirthdaySubmit}>
                 <div className="row mb-4">
-                  <label htmlFor="type" className="form-label">Tipo de recompensa</label>
-                  <select 
-                    className="form-select" 
-                    id="type"
-                    value={birthdayData.type}
-                    onChange={handleBirthdayChange}
-                  >
-                    <option value="">Seleccionar...</option>
-                    <option value="discount">Descuento</option>
-                    <option value="gift">Regalo</option>
-                  </select>
-                </div>
-
-                <div className="row mb-4">
-                  <div className="col-md-6">
-                    <label htmlFor="minSpend" className="form-label">Compra Mínima</label>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      id="minSpend"
-                      value={birthdayData.minSpend}
-                      onChange={handleBirthdayChange}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label htmlFor="discount" className="form-label">Descuento</label>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      id="discount"
-                      value={birthdayData.discount}
-                      onChange={handleBirthdayChange}
-                    />
+                  <div className="alert alert-info">
+                    Nota: La configuración de cumpleaños se aplica automáticamente por el sistema. 
+                    <br/>
+                    (Esta funcionalidad está en desarrollo en el backend)
                   </div>
                 </div>
 
                 <div className="row mb-3">
-                  <button type="submit" className="button_Modal">Guardar Configuración</button>
+                  <button type="button" className="button_Modal" onClick={() => setShowBirthdayModal(false)}>Cerrar</button>
                 </div>
               </form>
             </div>
           </div>
         </div>
-        {showBirthdayModal && <div className="modal-backdrop fade show" onClick={() => setShowBirthdayModal(false)}></div>}
       </div>
     </>
   );

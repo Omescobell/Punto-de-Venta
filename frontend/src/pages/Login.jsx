@@ -82,17 +82,17 @@ const Login = () => {
           <h2>Iniciar Sesión</h2>
           {error && <div className="alert alert-danger" role="alert">{error}</div>}
           <form onSubmit={handleSubmit}>
-            <div className="mb-3">
+            <div className="mb-3 lft">
               <label htmlFor="email" className="form-label">Correo Electrónico</label>
               <input 
-                type="email" 
+                type="email"
                 className="form-control" 
                 id="email"
                 value={credentials.email}
                 onChange={(e) => setCredentials({...credentials, email: e.target.value})}
               />
             </div>
-            <div className="mb-3">
+            <div className="mb-3 lft">
               <label htmlFor="password" className="form-label">Contraseña</label>
               <input 
                 type="password" 

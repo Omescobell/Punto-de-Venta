@@ -20,7 +20,36 @@
     display: flex;
     flex-direction: column;
 }
+/*Parte header Superior */
+.Superior {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 0 5%;
+    gap: 10px;
+    margin-bottom: 10px;
+}
 
+.button_logout {
+    background-color: #EC221F;
+    color: hsl(0, 0%, 100%);
+    border: none;
+    border-radius: 12px;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.1s;
+}
+
+.button_logout:active {
+    transform: scale(0.95);
+}
 /* Navbar Superior */
 .custom-navbar {
     padding: 30px 0;
@@ -237,7 +266,7 @@
 .Custom-Modal-Style textarea {
     border-radius: 8px;
     border: 1px solid #fff;
-    background-color: #fff;
+    background-color: #ddd;
     padding: 10px;
     width: 100%;
 }
@@ -266,4 +295,84 @@
 .Custom-Modal-Style .row {
     width: 100%;
     margin-bottom: 10px;
+}
+/* Estilos de Navbar por Rol */
+.header-container {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 0;
+    transition: background-color 0.3s ease;
+}
+
+/* User Info Badge */
+.role-badge {
+    background-color: #e0e0e0;
+    color: #333;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-right: 15px;
+}
+
+/* Admin Theme */
+.admin-theme {
+    color: white;
+}
+.admin-nav .nav-item a {
+    color: white !important;
+}
+.admin-nav .nav-item.active a {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff !important;
+}
+.admin-theme .role-badge {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Owner Theme */
+.owner-theme {
+
+    color: #333;
+}
+.owner-nav .nav-item a {
+    color: #333 !important;
+    font-weight: bold;
+}
+.owner-nav .nav-item.active a {
+    background-color: rgba(255, 255, 255, 0.5);
+    color: #000 !important;
+}
+
+/* Employee Theme */
+.employee-theme {
+    background-color: #f8f9fa; /* Gris muy claro */
+}
+.employee-nav .nav-item a {
+    color: #333 !important;
+}
+.employee-nav .nav-item.active a {
+    background-color: #e8f5e9;
+    color: #333 !important;
+}
+
+/* Ajustes generales para header con tema */
+.header-container .Superior {
+    /* Sobrescribir estilos bases si necesario para integrar el badge */
+    display: flex; 
+    justify-content: flex-end; /* A la derecha logout */
+    align-items: center;
+    padding: 0 20px;
+}
+.header-container .logout-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.header-container h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: inherit;
 }

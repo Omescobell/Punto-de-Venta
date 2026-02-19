@@ -300,8 +300,8 @@ const Inventario = () => {
                       value={formData.tax_rate}
                       onChange={handleInputChange}
                     >
-                      <option value="0.16">IVA General (16%)</option>
-                      <option value="0.08">IVA Fronterizo (8%)</option>
+                      <option value="16.00">IVA General (16%)</option>
+                      <option value="8.00">IVA Fronterizo (8%)</option>
                       <option value="0.00">Tasa Cero (0%)</option>
                       <option value="EXENT">Exento</option>
                     </select>
