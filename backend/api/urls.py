@@ -26,7 +26,7 @@ urlpatterns = [
     #Ruta maestra con todas las rutas de las apps (users,suppliers,customers,products)
     path('api/', include(master_router.urls)),
 
-    path('api-auth/', include('rest_framework.urls')),
-    path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/api-auth/', include('rest_framework.urls')),
+    path('api/auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

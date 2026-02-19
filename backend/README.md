@@ -481,6 +481,102 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
 ]
 ```
 
+## Store Credit Management
+
+This module manages the internal credit line for Frequent Customers. It allows viewing the transaction history and registering payments to reduce debt.
+
+### 16. Credit Transaction History
+
+Retrieves the complete financial ledger for a specific customer, including charges (purchases), payments, and manual adjustments.
+
+*   **Endpoint:** `/customers/{id}/credit-history/`
+
+*   **Method:** `GET`
+
+*   **Access:** Authenticated
+
+**Response (200 OK):**
+
+Returns a list ordered by date (newest first).
+
+```json
+[
+  {
+    "id": 45,
+    "amount": "200.00",
+    "transaction_type": "PAYMENT",
+    "description": "Cash payment at register",
+    "created_at": "2023-10-28T10:00:00Z"
+  },
+  {
+    "id": 44,
+    "amount": "550.50",
+    "transaction_type": "CHARGE",
+    "description": "Purchase - Ticket #F-902",
+    "created_at": "2023-10-27T16:30:00Z"
+  }
+]
+```
+
+### 17. Pay Off Credit (Register Payment)
+
+Registers a payment towards the customer's debt. This action reduces the credit_used balance and immediately releases available_credit.
+
+*   **Endpoint:** `/customers/{id}/pay-credit/`
+
+*   **Method:** `POST`
+
+*   **Access:** Authenticated
+
+**Business Rules:**
+
+*   **Positive Amount:** The payment amount must be greater than zero.
+
+*   **Idempotency:** Paying more than the current debt will result in a credit_used balance of 0.00 (it does not create a negative balance/store credit surplus in this version).
+
+**Request Body:**
+```json
+{
+  "amount": 200.00,
+  "description": "Partial payment via Bank Transfer"
+}
+```
+**Response (200 OK):**
+
+Returns the updated balance status immediately after the transaction.
+
+```json
+{
+  "status": "success",
+  "new_credit_used": "350.50",
+  "available_credit": "1649.50"
+}
+```
+
+### 18. Credit Logic & Errors (400 Bad Request)
+
+The API enforces logic defined in the model. Below are standard error responses for credit operations.
+
+**Case A: Invalid Amount**
+
+Occurs when trying to pay a negative amount or sending an empty value.
+```json
+{
+  "error": [
+    "El monto del abono debe ser positivo." 
+  ]
+}
+```
+**Case B: Insufficient Credit (On Purchase/Charge)**
+*Note: Charges usually happen via the Order endpoint, but this logic applies.*
+{
+  "error": [
+    "Crédito insuficiente. Disponible: $50.00"
+  ]
+}
+
+
+
 ## Product Management
 
 **Security Notice:**
@@ -488,6 +584,10 @@ Retrieves the full ledger of transactions for a specific customer, ordered by da
 *   **Employees:** Can `List`, `Create`, `Update`, and `Reserve` stock. They CANNOT `delete` products.
 
 *   **Admins/Owners:** Have full access, including Delete.
+
+**Features**
+
+*   **Low Stock**: The system automatically updates the `low_stock` field. 
 
 ### 16. List & Create Products
 
@@ -507,9 +607,9 @@ Retrieves the product catalog or registers a new item in the inventory.
 
 **Supported Tax Rates (`tax_rate`):**
 
-*   `"0.16"`: IVA General (16%)
+*   `"16.00"`: IVA General (16%)
 
-*   `"0.08"`: IVA Fronterizo (8%)
+*   `"8.00"`: IVA Fronterizo (8%)
 
 *   `"0.00"`: Tasa Cero (0%)
 
@@ -527,7 +627,6 @@ Request Body (POST):
   "price": "18.50",       // Base price
   "tax_rate": "0.16",     // 16% IVA
   "current_stock": 100,
-  "min_stock": 10,
   "supplier": 1
 }
 ```

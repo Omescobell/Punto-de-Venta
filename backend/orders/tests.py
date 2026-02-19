@@ -1,5 +1,6 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
+from django.utils import timezone
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from products.models import Product, Promotion
@@ -30,7 +31,7 @@ class SaleProcessTests(APITestCase):
             current_stock=10, reserved_quantity=5, supplier=supplier, tax_rate='0.00'
         )
 
-        # ¡OJO! Esta promoción se aplica automáticamente en todos los tests si no se desactiva.
+        # Esta promoción se aplica automáticamente en todos los tests si no se desactiva.
         # Reduce el precio a $90.
         self.promotion = Promotion.objects.create(
             name="Desc 10%", 
@@ -70,8 +71,6 @@ class SaleProcessTests(APITestCase):
                     "product_id": self.product.id,
                     "quantity": 2
                     # No enviamos promotion_id explícito, el sistema debería detectarlo
-                    # o si tu lógica requiere enviarlo, asegúrate de que el serializer lo maneje.
-                    # Asumiendo que product.final_price ya trae el descuento.
                 }
             ]
         }
@@ -139,7 +138,7 @@ class SaleProcessTests(APITestCase):
         self.promotion.save()
 
         # 2. Configurar cumpleaños HOY
-        today = date.today()
+        today = timezone.now().date()
         self.customer.birth_date = today.replace(year=1990)
         self.customer.last_birthday_discount_year = None 
         self.customer.save()
@@ -171,7 +170,7 @@ class SaleProcessTests(APITestCase):
         self.client.force_authenticate(user=self.seller)
 
         # 1. Configurar Cumpleaños
-        today = date.today()
+        today = timezone.now().date()
         self.customer.birth_date = today.replace(year=1990)
         self.customer.last_birthday_discount_year = None
         self.customer.save()

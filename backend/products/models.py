@@ -5,6 +5,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+from django.core.management.base import BaseCommand
+from django.db.models import Sum
+from orders.models import OrderItems
+import datetime
 
 class Product(models.Model):
     class TaxType(models.TextChoices):
@@ -43,7 +47,7 @@ class Product(models.Model):
     )
     current_stock = models.IntegerField(default=0)
     reserved_quantity = models.IntegerField(default=0)
-    min_stock = models.IntegerField(default=0)
+    low_stock = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     supplier = models.ForeignKey(
         'suppliers.Supplier', 
@@ -120,6 +124,41 @@ class Product(models.Model):
         #PROMOCIÓN GENERAL
         return self.discounted_price, self.final_price, promo_name
 
+    def update_inventory_status(self):
+        """
+        Calcula si el producto debe ser Low Stock.
+        Retorna True si cambió el estatus, False si sigue igual.
+        """
+        from orders.models import OrderItems # Import local para evitar ciclos
+        
+        # 1. Fechas del mes pasado
+        now = timezone.localtime(timezone.now())
+        start_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_prev_month = start_current_month - datetime.timedelta(days=1)
+        start_prev_month = end_prev_month.replace(day=1)
+
+        # 2. Sumar ventas PAGADAS del mes pasado
+        total_sold = OrderItems.objects.filter(
+            product=self,
+            order__created_at__gte=start_prev_month,
+            order__created_at__lt=start_current_month,
+            order__status='PAID' 
+        ).exclude(
+            order__status='CANCELLED'
+        ).aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+
+        # 3. Comparar con Stock Actual
+        should_be_low_stock = self.current_stock < total_sold
+
+        if self.low_stock != should_be_low_stock:
+            self.low_stock = should_be_low_stock
+            # Guardamos SOLO este campo para ser rápidos
+            self.save(update_fields=['low_stock'])
+            return True 
+        return False
+    
     class Meta:
         db_table = 'PRODUCTS'
 
@@ -251,4 +290,3 @@ class Promotion(models.Model):
                 count += 1
         
         return count
-
