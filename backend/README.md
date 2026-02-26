@@ -1112,6 +1112,374 @@ Common validation errors specific to the ChatBot Users module.
   "detail": "Not found."
 }
 ```
+
+## Analytics
+
+**Security Notice:**
+
+*   **Employees:** CANNOT access any endpoints in this module. Attempting to do so will return a `403 Forbidden`.
+
+*   **Admins/Owners:** Have full access to view business metrics and reports.
+
+**Features**
+
+*   **Strict Date Validation:** The system automatically validates if the requested date range has existing records. If no sales exist on the requested dates, it halts the process to save database resources and suggests the valid operational dates.
+
+*   **Paid Orders Only:** All financial metrics strictly exclude `PENDING` or `CANCELED` orders to guarantee accounting accuracy.
+
+### 26. Sales Summary
+
+Generates a comprehensive financial and operational report for a specific period. It aggregates total revenue, calculates average tickets, identifies the peak hours of operation, and groups revenue by payment methods.
+
+*   **Endpoint:** `/analytics/sales-summary/`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+Query Parameters (Optional):
+
+*   `start_date` (YYYY-MM-DD): Start of the analysis period.
+
+*   `end_date` (YYYY-MM-DD): End of the analysis period.
+
+*   *Note*: If no dates are provided, the system defaults to the last 30 days of operation.
+
+**Response (200 OK):**
+```json
+{
+  "analyzed_period": {
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-31"
+  },
+  "general_summary": {
+    "total_revenue": 2494.00,
+    "average_ticket": 831.33,
+    "lowest_ticket": 116.00,
+    "highest_ticket": 1218.00,
+    "total_tickets": 3
+  },
+  "products": {
+    "total_units_sold": 5,
+    "top_product": {
+      "product_name": "Laptop",
+      "revenue": 2000.00
+    },
+    "breakdown": [
+      {
+        "product_name": "Laptop",
+        "units_sold": 2,
+        "revenue": 2000.00
+      },
+      {
+        "product_name": "Mouse",
+        "units_sold": 3,
+        "revenue": 150.00
+      }
+    ]
+  },
+  "peak_hours": {
+    "most_profitable_hour": {
+      "hour": 14,
+      "total_revenue": 1334.00,
+      "ticket_count": 2
+    },
+    "busiest_hour": {
+      "hour": 14,
+      "total_revenue": 1334.00,
+      "ticket_count": 2
+    },
+    "hourly_breakdown": [
+      {
+        "hour": 10,
+        "total_revenue": 1160.00,
+        "ticket_count": 1
+      },
+      {
+        "hour": 14,
+        "total_revenue": 1334.00,
+        "ticket_count": 2
+      }
+    ]
+  },
+  "payment_methods": [
+    {
+      "payment_method": "CARD",
+      "total_sales": 2,
+      "average_ticket": 1189.00,
+      "highest_ticket": 1218.00,
+      "accumulated_amount": 2378.00
+    },
+    {
+      "payment_method": "CASH",
+      "total_sales": 1,
+      "average_ticket": 116.00,
+      "highest_ticket": 116.00,
+      "accumulated_amount": 116.00
+    }
+  ]
+}
+```
+**Scenario A: Invalid Dates or No Records (400 Bad Request)**
+
+Occurs if the user requests a date in the future, a date where the store was closed, or sends a malformed string.
+
+```json
+{
+  "error": "No sales found for the date 2024-12-31 in the system.",
+  "first_system_record": "2023-01-15",
+  "last_system_record": "2023-10-31"
+}
+```
+### 27. Product Sales Ranking
+
+Returns a ranked list of the most or least sold products based purely on units sold (inventory movement), not revenue.
+
+*   **Endpoint:** `/analytics/product-ranking/`, example `/api/analytics/product-ranking/?limit=5&criterion=most`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+**Query Parameters (Optional):**
+
+*   `start_date` (YYYY-MM-DD): Start of the analysis period.
+
+*    `end_date` (YYYY-MM-DD): End of the analysis period.
+
+*    `limit` (Integer): Number of results to return per list. Default is `10`.
+
+*    `criterion` (String): Accepts `"most"`, `"least"`, or `"both"`. Default is `"most"`.
+
+**Response (200 OK) - Using `criterion=ambos` and `limit=2`:**
+```json
+{
+  "analyzed_period": {
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-31"
+  },
+  "results": {
+    "criterion": "both",
+    "results_limit": 2,
+    "most_sold": [
+      {
+        "product__id": 3,
+        "product_name": "Teclado",
+        "units_sold": 5,
+        "revenue": 750.00
+      },
+      {
+        "product__id": 2,
+        "product_name": "Mouse",
+        "units_sold": 3,
+        "revenue": 150.00
+      }
+    ],
+    "least_sold": [
+      {
+        "product__id": 1,
+        "product_name": "Laptop",
+        "units_sold": 1,
+        "revenue": 1000.00
+      },
+      {
+        "product__id": 2,
+        "product_name": "Mouse",
+        "units_sold": 3,
+        "revenue": 150.00
+      }
+    ]
+  }
+}
+```
+**Scenario A: Valid Dates, but No Items Sold (200 OK)**
+
+Occurs when the dates are valid system dates, but specifically, no items were sold (e.g., store was open but no sales were made).
+```json
+{
+  "analyzed_period": {
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-01"
+  },
+  "detail": "No products sold in the selected period."
+}
+```
+
+### 28. Low Stock Report
+
+Identifies products with low inventory levels. If a custom threshold is not provided, it defaults to returning products that are automatically flagged by the system (`low_stock=True`).
+
+*   **Endpoint:** `/analytics/reports/low-stock/`, example `/api/analytics/reports/low-stock/?threshold=10`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+**Query Parameters (Optional):**
+
+*   `threshold` (Integer): A custom quantity. The system will return all products where current_stock is less than or equal to this number.
+
+**Response (200 OK - Results Found):**
+
+Returns an array of products ordered from highest to lowest stock within the threshold.
+```json
+[
+  {
+    "name": "Coca Cola 600ml",
+    "current_stock": 8
+  },
+  {
+    "name": "Galletas Emperador",
+    "current_stock": 2
+  },
+  {
+    "name": "Agua Ciel 1L",
+    "current_stock": 0
+  }
+]
+```
+**Scenario A: Invalid Threshold or No Products in Threshold (200 OK)**
+
+Occurs when there are no products matching the criteria, the system is empty, or the user inputs an invalid threshold format (e.g., text instead of a number).
+
+```json
+{
+  "message": "No hay productos dentro del umbral establecido."
+}
+```
+
+### 29. Dead Inventory Report
+
+Identifies "dead" inventory: products that have not generated any paid sales since a specified reference date. This is crucial for clearing out non-moving stock.
+
+*   **Endpoint:** `/analytics/reports/dead-inventory/`, example `/api/analytics/reports/dead-inventory/?reference_date=2023-10-01`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+**Query Parameters (Optional):**
+
+*   `reference_date` (YYYY-MM-DD): The date to start searching for sales.
+
+*   *Note:* If no date is provided, the system defaults to analyzing the last 30 days of operation.
+
+**Response (200 OK - Results Found):**
+
+Returns an array of the dead products, including their ID to easily link them to the product management module.
+```json
+[
+  {
+    "id": 14,
+    "name": "Funda iPhone 12 Rosa",
+    "current_stock": 15
+  },
+  {
+    "id": 42,
+    "name": "Cargador Genérico USB-C",
+    "current_stock": 50
+  }
+]
+```
+
+**Scenario A: All Products Sold or Invalid Date (200 OK)**
+
+Occurs if every single product in the catalog has had at least one sale in the requested period, or if the user sends an invalid date string.
+```json
+{
+  "message": "Todos los productos han tenido ventas en este período."
+}
+```
+
+### 30. Customer Sales History
+
+Retrieves the complete sales history and behavior metrics for a specific customer within a given timeframe.
+
+*   **Endpoint:** `/analytics/customer-sales/`, example `/api/analytics/customer-sales/?customer_id=5&start_date=2023-10-01`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+**Query Parameters:**
+
+*   `customer_id` (Integer) **Required:** The unique identifier of the customer.
+
+*   `start_date` (YYYY-MM-DD) **Optional:** Start of the analysis period.
+
+*   `end_date` (YYYY-MM-DD) **Optional:** End of the analysis period. Defaults to the last 30 days.
+
+**Response (200 OK - Results Found):**
+```json
+{
+  "customer_info": {
+    "id": 5,
+    "name": "Juan Pérez",
+    "email": "juan.perez@email.com"
+  },
+  "analyzed_period": {
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-31"
+  },
+  "sales_metrics": {
+    "total_spent": 1500.00,
+    "average_ticket": 500.00,
+    "total_tickets": 3
+  },
+  "top_product": {
+    "product_name": "Laptop",
+    "total_spent_on_product": 1000.00,
+    "units_bought": 1
+  },
+  "peak_buying_hours": [
+    {
+      "hour": 18,
+      "total_spent": 1000.00,
+      "ticket_count": 1
+    },
+    {
+      "hour": 10,
+      "total_spent": 500.00,
+      "ticket_count": 2
+    }
+  ],
+  "payment_methods": [
+    {
+      "payment_method": "CARD",
+      "total_sales": 2,
+      "average_ticket": 250.00,
+      "accumulated_amount": 500.00
+    },
+    {
+      "payment_method": "CASH",
+      "total_sales": 1,
+      "average_ticket": 1000.00,
+      "accumulated_amount": 1000.00
+    }
+  ]
+}
+```
+**Scenario A: Customer Validated, but No Purchases in Period (200 OK)**
+```json
+{
+  "customer_info": {
+    "id": 5,
+    "name": "Juan Pérez"
+  },
+  "analyzed_period": {
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-31"
+  },
+  "detail": "This customer made no purchases during the selected period."
+}
+```
+**Scenario B: Customer Does Not Exist (404 Not Found)**
+```json
+{
+  "error": "Customer not registered in the system."
+}
+```
+
 ## Data Definitions
 ### User Roles
 
