@@ -1480,6 +1480,59 @@ Retrieves the complete sales history and behavior metrics for a specific custome
 }
 ```
 
+### 31. Sales Velocity & Depletion Estimation
+
+Calculates the daily sales velocity (sell-through rate) of a specific product and estimates the number of days until its inventory is depleted based on that rate. Automatically adjusts the analysis period if the product's first sale occurred more recently than the requested timeframe.
+
+*   **Endpoint:** `/analytics/sales-velocity/`, example `/api/analytics/sales-velocity/?identifier=FAST123&period_days=30`
+
+*   **Methods:** `GET`
+
+*   **Access:** Authenticated (`Admin` & `Owner` Only)
+
+**Query Parameters:**
+
+*   **`identifier` (String) Required:** The exact `name` or barcode (`SKU`) of the product (case-insensitive).
+
+*   **`period_days` (Integer) Optional:** The number of historical days to analyze. Defaults to 30.
+
+**Response (200 OK - Results Found):**
+```json
+{
+  "product_name": "Laptop Gamer",
+  "product_sku": "FAST123",
+  "analyzed_period_days": 30,
+  "total_units_sold": 60,
+  "sales_velocity": 2.0,
+  "current_stock": 100,
+  "depletion_estimation_days": 50
+}
+```
+**Scenario A: Product Validated, but No Sales in Period (200 OK)**
+```json
+{
+  "product_name": "Mouse Viejo",
+  "product_sku": "SLOW123",
+  "analyzed_period_days": 30,
+  "total_units_sold": 0,
+  "sales_velocity": 0.0,
+  "current_stock": 50,
+  "depletion_estimation_days": "Indefinida"
+}
+```
+**Scenario B: Missing Identifier (400 Bad Request)**
+```json
+{
+  "error": "Product identifier (Name or SKU) is required."
+}
+```
+**Scenario C: Product Does Not Exist (404 Not Found)**
+```json
+{
+  "error": "Product not found in the system."
+}
+```
+
 ## Data Definitions
 ### User Roles
 

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.db.models import Sum, Avg, Max, Min, Count, F
+from django.db.models import Sum, Avg, Max, Min, Count, F, Q
 from django.db.models.functions import ExtractHour
 from orders.models import Order, OrderItems
 from products.models import Product
@@ -329,6 +329,71 @@ class InventoryService:
             "success": True,
             "data": report_data
         }
+    
+    @classmethod
+    def calculate_sales_velocity(cls, identifier, period_days=30):
+        if not identifier:
+            return None, {"error": "Product identifier (Name or SKU) is required."}, 400
+
+        try:
+            product = Product.objects.get(Q(sku=identifier) | Q(name__iexact=identifier))
+        except Product.DoesNotExist:
+            return None, {"error": "Product not found in the system."}, 404
+        except Product.MultipleObjectsReturned:
+            product = Product.objects.filter(Q(sku=identifier) | Q(name__iexact=identifier)).first()
+
+        now = timezone.now()
+        
+        first_sale_data = OrderItems.objects.filter(
+            product=product,
+            order__status='PAID'
+        ).aggregate(first_sale_date=Min('order__created_at'))
+        
+        first_sale_date = first_sale_data['first_sale_date']
+        
+        actual_period_days = int(period_days)
+        start_date = now - timedelta(days=actual_period_days)
+        if first_sale_date:
+            days_since_first_sale = (now - first_sale_date).days
+            days_since_first_sale = max(1, days_since_first_sale)
+            if days_since_first_sale < actual_period_days:
+                actual_period_days = days_since_first_sale
+                start_date = first_sale_date
+
+        # Recopilación de ventas del producto en el periodo ajustado
+        period_items = OrderItems.objects.filter(
+            product=product,
+            order__status='PAID',
+            order__created_at__gte=start_date
+        )
+
+        # Suma de unidades
+        total_units_sold = period_items.aggregate(total=Sum('quantity'))['total'] or 0
+
+        # Cálculo del Promedio Diario (Velocidad de venta)
+        sales_velocity = total_units_sold / actual_period_days
+
+        # 4. Consulta de Inventario y Estimación de Agotamiento
+        current_stock = product.current_stock
+        
+        if sales_velocity > 0:
+            # current_stock / velocidad diaria = días para agotarse
+            depletion_estimation = round(current_stock / sales_velocity)
+        else:
+            depletion_estimation = "Indefinida"
+
+        # 5. Generación del Informe Consolidado
+        report = {
+            "product_name": product.name,
+            "product_sku": product.sku,
+            "analyzed_period_days": actual_period_days,
+            "total_units_sold": total_units_sold,
+            "sales_velocity": round(sales_velocity, 2),  # Redondeamos a 2 decimales
+            "current_stock": current_stock,
+            "depletion_estimation_days": depletion_estimation
+        }
+
+        return report, None, 200
 
 class CustomerAnalyticsService:
 
@@ -343,11 +408,7 @@ class CustomerAnalyticsService:
         except Customer.DoesNotExist:
             return None, {"error": "Customer not registered in the system."}, 404
 
-        # 2. Filtrar órdenes del cliente (Solo pagadas)
         customer_orders = Order.objects.filter(customer=customer, status='PAID')
-
-        # 3. Validación de Fechas (CORRECCIÓN AQUÍ)
-        # Usamos TODAS las órdenes de la tienda para validar que las fechas existen en el sistema.
         all_store_orders = Order.objects.filter(status='PAID')
         
         start_date, end_date, error = DateValidationService.validate_and_get_date_range(
@@ -361,13 +422,10 @@ class CustomerAnalyticsService:
         if error:
             return None, error, 400
 
-        # 4. Recopilación de Datos Filtrados
         period_orders = customer_orders.filter(
             created_at__date__gte=start_date,
             created_at__date__lte=end_date
         )
-
-        # 5. Construir info base (CORRECCIÓN DE KEYS AQUÍ)
         base_response = {
             "customer_info": {
                 "id": customer.id,
@@ -382,20 +440,16 @@ class CustomerAnalyticsService:
             }
         }
 
-        # 6. Si no hay compras del cliente en el periodo válido, devolvemos 200 OK con el detalle
         if not period_orders.exists():
             base_response["detail"] = "This customer made no purchases during the selected period."
             return base_response, None, 200
 
-        # 7. Cálculo de Métricas
         sales_metrics = cls._calculate_customer_totals(period_orders)
         top_product = cls._get_customer_top_product(period_orders)
         
-        # Reutilizamos lógica de SalesAnalyticsService
         peak_hours = SalesAnalyticsService._calculate_hourly_stats(period_orders)['hourly_breakdown']
         payment_methods = SalesAnalyticsService._calculate_payment_stats(period_orders)
 
-        # 8. Construir Informe Final
         base_response.update({
             "sales_metrics": sales_metrics,
             "top_product": top_product,

@@ -796,3 +796,98 @@ class CustomerSalesTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn('error', response.data)
         self.assertEqual(response.data['error'], "Customer not registered in the system.")
+
+
+class SalesVelocityTests(APITestCase):
+
+    def setUp(self):
+        # 1. Autenticación
+        self.user = User.objects.create_superuser(username='admin', password='password123',email="admin@gmail.com")
+        self.client.force_authenticate(user=self.user)
+        
+        # URL de la acción (ajusta si tu router tiene otro prefijo)
+        self.url = '/api/analytics/sales-velocity/' 
+
+        # 2. Datos Base
+        self.supplier = Supplier.objects.create(name="Proveedor X", phone_number="123", rfc="XXX")
+        self.customer = Customer.objects.create(first_name="Test", last_name="Customer", email="test@test.com",birth_date="2000-12-12")
+
+        # 3. Crear Producto de Alta Rotación
+        self.product_fast = Product.objects.create(
+            sku="FAST123", 
+            name="Laptop Gamer", 
+            price=Decimal('1000.00'), 
+            current_stock=100, # <--- Stock de 100
+            supplier=self.supplier
+        )
+
+        # 4. Crear Producto Estancado (Sin ventas)
+        self.product_slow = Product.objects.create(
+            sku="SLOW123", 
+            name="Mouse Viejo", 
+            price=Decimal('10.00'), 
+            current_stock=50, 
+            supplier=self.supplier
+        )
+
+        # 5. Simular una venta hace exactamente 10 días
+        now = timezone.now()
+        ten_days_ago = now - timedelta(days=10)
+
+        self.order = Order.objects.create(customer=self.customer, status='PAID', payment_method='CASH')
+        
+        # Vendemos 20 unidades
+        OrderItems.objects.create(
+            order=self.order, 
+            product=self.product_fast, 
+            product_name=self.product_fast.name,
+            quantity=20,  # <--- 20 unidades vendidas
+            unit_price=self.product_fast.price, 
+            amount=self.product_fast.price * 20
+        )
+
+        # Forzamos la fecha al pasado (hace 10 días)
+        Order.objects.filter(id=self.order.id).update(
+            created_at=ten_days_ago, 
+            final_amount=Decimal('20000.00')
+        )
+
+    def test_sales_velocity_success_math(self):
+        """Prueba que el cálculo de velocidad y agotamiento sea matemáticamente exacto."""
+        # Solicitamos periodo de 30 días, pero el sistema debe auto-ajustarse a 10 (por la primera venta)
+        response = self.client.get(self.url, {'identifier': 'FAST123', 'period_days': 30})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+
+        self.assertEqual(data['product_name'], "Laptop Gamer")
+        self.assertEqual(data['analyzed_period_days'], 10)  # El sistema detectó que solo lleva 10 días vendiéndose
+        self.assertEqual(data['total_units_sold'], 20)
+        self.assertEqual(data['sales_velocity'], 2.0)  # 20 unidades / 10 días
+        self.assertEqual(data['depletion_estimation_days'], 50)  # 100 stock / 2.0 velocidad
+
+    def test_sales_velocity_no_sales_indefinite(self):
+        """Prueba un producto sin ventas. Validando el __iexact en la búsqueda."""
+        # Lo buscamos en minúsculas para probar que el __iexact funciona
+        response = self.client.get(self.url, {'identifier': 'mouse VIEJO'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+
+        self.assertEqual(data['total_units_sold'], 0)
+        self.assertEqual(data['sales_velocity'], 0.0)
+        self.assertEqual(data['depletion_estimation_days'], "Indefinida")
+
+    def test_missing_identifier(self):
+        """Prueba que tire error 400 si no se envía el parámetro obligatorio."""
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], "Product identifier (Name or SKU) is required.")
+
+    def test_product_not_found(self):
+        """Prueba que tire error 404 si el SKU o Nombre no existen."""
+        response = self.client.get(self.url, {'identifier': 'FANTASMA999'})
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], "Product not found in the system.")

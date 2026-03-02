@@ -98,3 +98,27 @@ class AnalyticsViewSet(viewsets.ViewSet):
             return Response(error, status=status_code)
 
         return Response(data, status=status_code)
+    # * Con SKU
+    # ! /api/analytics/sales-velocity/?identifier=FAST123&period_days=30
+    # * Con nombre y el 30 dias por defecto
+    # ! /api/analytics/sales-velocity/?identifier=Laptop%20Gamer
+    @action(detail=False, methods=['get'], url_path='sales-velocity')
+    def sales_velocity(self, request):
+        """
+        Calcula la velocidad de venta de un producto y estima en cuántos días se agotará.
+        Params: 
+        - identifier (obligatorio): Nombre exacto o Código de Barras (SKU)
+        - period_days (opcional): Número de días a analizar (default: 30)
+        """
+        identifier = request.query_params.get('identifier')
+        period_days = request.query_params.get('period_days', 30)
+
+        data, error, status_code = InventoryService.calculate_sales_velocity(
+            identifier=identifier,
+            period_days=period_days
+        )
+
+        if error:
+            return Response(error, status=status_code)
+
+        return Response(data, status=status_code)
