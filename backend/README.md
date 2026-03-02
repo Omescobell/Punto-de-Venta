@@ -1533,6 +1533,51 @@ Calculates the daily sales velocity (sell-through rate) of a specific product an
 }
 ```
 
+### 31. Inventory Valuation & Financial Metrics
+
+Calculates the total financial value of the current inventory based on the provider cost (price) and the retail price with tax (`final_price`). Projects potential profit and profit margins for the entire inventory or a specific product.
+
+*   **Endpoint:** `/api/analytics/inventory-valuation/`, example, SKU `/api/analytics/inventory-valuation/?product_identifier=TEC001`, name `/api/analytics/inventory-valuation/?product_identifier=Monitor%20Gamer`
+
+*   **Methods:** `GET`
+
+    Access: Authenticated (Admin & Owner Only)
+
+Query Parameters:
+
+*   `product_identifier` (String) Optional: The exact `name` or barcode (`SKU`) of a specific product to evaluate. *(Note: If not provided, the system evaluates the Entire Inventory).*
+
+**Response (200 OK - Results Found):**
+```json
+{
+  "scope": "Entire Inventory",
+  "financial_metrics": {
+    "total_inventory_cost": 150.00,
+    "total_potential_sale": 174.00,
+    "total_potential_profit": 24.00,
+    "profit_margin_percentage": 13.79
+  }
+}
+```
+**Scenario A: Specific Product Validated (200 OK)**
+```json
+{
+  "scope": "Specific Product: TEC001",
+  "financial_metrics": {
+    "total_inventory_cost": 50.00,
+    "total_potential_sale": 58.00,
+    "total_potential_profit": 8.00,
+    "profit_margin_percentage": 13.79
+  }
+}
+```
+**Scenario B: Product Validated but No Stock / Not Found (404 Not Found)**
+```json
+{
+  "error": "No products available in the selected scope."
+}
+```
+
 ## Data Definitions
 ### User Roles
 

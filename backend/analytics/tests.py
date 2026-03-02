@@ -891,3 +891,90 @@ class SalesVelocityTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['error'], "Product not found in the system.")
+
+class InventoryValuationTests(APITestCase):
+    
+    def setUp(self):
+        self.user = User.objects.create_superuser('admin', 'admin@test.com', 'password')
+        self.client.force_authenticate(user=self.user)
+
+        self.supplier = Supplier.objects.create(
+            name="Proveedor General", phone_number="123456789", rfc="ABC123456T1"
+        )
+        # Producto 1: Costo (price) 10.00
+        # Al guardar -> final_price = 11.60 (10 + 16% IVA)
+        # Stock: 5
+        # Inversión: 50.00 | Venta Potencial: 58.00 | Ganancia: 8.00
+        self.product_a = Product.objects.create(
+            name="Teclado Mecánico",
+            sku="TEC001",
+            price=Decimal('10.00'), 
+            current_stock=5,
+            supplier_id = self.supplier.id,
+        )
+        # Producto 2: Costo (price) 50.00
+        # Al guardar -> final_price = 58.00 (50 + 16% IVA)
+        # Stock: 2 
+        # Inversión: 100.00 | Venta Potencial: 116.00 | Ganancia: 16.00
+        self.product_b = Product.objects.create(
+            name="Monitor Gamer",
+            sku="MON002",
+            price=Decimal('50.00'),
+            current_stock=2,
+            supplier_id = self.supplier.id,
+        )
+        
+        # Producto 3: Sin stock (Debería ser ignorado por el sistema)
+        self.product_empty = Product.objects.create(
+            name="Mouse Agotado",
+            sku="MOU003",
+            price=Decimal('5.00'),
+            current_stock=0,
+            supplier_id = self.supplier.id,
+        )
+        
+        # Ajusta esta URL a la ruta de tu API
+        self.url = '/api/analytics/inventory-valuation/' 
+
+    def test_entire_inventory_valuation(self):
+        """
+        Prueba la valuación de todo el inventario con stock.
+        Costo Total Esperado: 50.00 + 100.00 = 150.00
+        Venta Total Esperada: 58.00 + 116.00 = 174.00
+        Ganancia Esperada: 24.00
+        Margen Esperado: (24.00 / 174.00) * 100 = 13.79%
+        """
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        metrics = response.data['financial_metrics']
+        
+        self.assertEqual(response.data['scope'], "Entire Inventory")
+        # Casteamos o comparamos flotantes dependiendo de cómo lo devuelva tu API
+        self.assertEqual(metrics['total_inventory_cost'], Decimal('150.00'))
+        self.assertEqual(metrics['total_potential_sale'], Decimal('174.00'))
+        self.assertEqual(metrics['total_potential_profit'], Decimal('24.00'))
+        self.assertEqual(metrics['profit_margin_percentage'], Decimal('13.79')) # 13.7931... redondeado a 2 decimales
+
+    def test_specific_product_valuation(self):
+        """Prueba la valuación de un producto específico buscado por SKU"""
+        response = self.client.get(f"{self.url}?product_identifier=TEC001")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        metrics = response.data['financial_metrics']
+        
+        self.assertEqual(metrics['total_inventory_cost'], Decimal('50.00'))
+        self.assertEqual(metrics['total_potential_sale'], Decimal('58.00'))
+        self.assertEqual(metrics['total_potential_profit'], Decimal('8.00'))
+        self.assertEqual(metrics['profit_margin_percentage'], Decimal('13.79'))
+
+    def test_product_not_found_or_no_stock(self):
+        """Prueba buscando un producto que no existe o que tiene stock en 0"""
+        # Caso 1: Producto con stock en 0
+        response_empty = self.client.get(f"{self.url}?product_identifier=MOU003")
+        self.assertEqual(response_empty.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response_empty.data['error'], "No products available in the selected scope.")
+        
+        # Caso 2: Producto que no existe
+        response_not_found = self.client.get(f"{self.url}?product_identifier=FANTASMA")
+        self.assertEqual(response_not_found.status_code, status.HTTP_404_NOT_FOUND)

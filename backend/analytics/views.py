@@ -122,3 +122,23 @@ class AnalyticsViewSet(viewsets.ViewSet):
             return Response(error, status=status_code)
 
         return Response(data, status=status_code)
+    
+    # * Por SKU
+    # ! /api/analytics/inventory-valuation/?product_identifier=TEC001
+    # * Por nombre
+    # ! /api/analytics/inventory-valuation/?product_identifier=Monitor%20Gamer
+    @action(detail=False, methods=['get'], url_path='inventory-valuation')
+    def inventory_valuation(self, request):
+        """
+        Calcula el valor financiero del inventario actual.
+        """
+        product_identifier = request.query_params.get('product_identifier', None)
+
+        report, error, status_code = InventoryService.calculate_inventory_valuation(
+            product_identifier=product_identifier
+        )
+
+        if error:
+            return Response(error, status=status_code)
+
+        return Response(report, status=status.HTTP_200_OK)

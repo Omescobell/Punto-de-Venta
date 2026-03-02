@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.db.models import Sum, Avg, Max, Min, Count, F, Q
+from django.db.models import Sum, Avg, Max, Min, Count, F, Q, DecimalField
 from django.db.models.functions import ExtractHour
 from orders.models import Order, OrderItems
 from products.models import Product
 from customers.models import Customer
-
+from decimal import Decimal
 
 class ProductAnalyticsService:
 
@@ -391,6 +391,100 @@ class InventoryService:
             "sales_velocity": round(sales_velocity, 2),  # Redondeamos a 2 decimales
             "current_stock": current_stock,
             "depletion_estimation_days": depletion_estimation
+        }
+
+        return report, None, 200
+
+    @classmethod
+    def calculate_inventory_valuation(cls, product_identifier=None):
+        # 1. Filtramos solo los productos que tienen stock
+        queryset = Product.objects.filter(current_stock__gt=0)
+        scope_name = "Entire Inventory"
+        
+        # Filtrado por producto específico si se envía
+        if product_identifier:
+            queryset = queryset.filter(Q(sku=product_identifier) | Q(name__iexact=product_identifier))
+            scope_name = f"Specific Product: {product_identifier}"
+
+        if not queryset.exists():
+            return None, {"error": "No products available in the selected scope."}, 404
+
+        # 2. Suma a nivel de BD usando 'price' (costo proveedor) y 'final_price' (venta al público)
+        totals = queryset.aggregate(
+            total_net_cost=Sum(
+                F('price') * F('current_stock'), 
+                output_field=DecimalField()
+            ),
+            total_potential_sale=Sum(
+                F('final_price') * F('current_stock'), 
+                output_field=DecimalField()
+            )
+        )
+
+        total_net_cost = totals['total_net_cost'] or Decimal('0.00')
+        total_potential_sale = totals['total_potential_sale'] or Decimal('0.00')
+
+        # ! Cálculo de Ganancia y Margen
+        potential_profit = total_potential_sale - total_net_cost
+
+        if total_potential_sale > 0:
+            profit_margin_percentage = (potential_profit / total_potential_sale) * Decimal('100.00')
+        else:
+            profit_margin_percentage = Decimal('0.00')
+
+        # ! Generación del Informe Financiero
+        report = {
+            "scope": scope_name,
+            "financial_metrics": {
+                "total_inventory_cost": round(total_net_cost, 2),
+                "total_potential_sale": round(total_potential_sale, 2),
+                "total_potential_profit": round(potential_profit, 2),
+                "profit_margin_percentage": round(profit_margin_percentage, 2)
+            }
+        }
+
+        return report, None, 200
+    @staticmethod
+    def calculate_inventory_valuation(product_identifier=None):
+        queryset = Product.objects.filter(current_stock__gt=0)
+        scope_name = "Entire Inventory"
+        
+        if product_identifier:
+            queryset = queryset.filter(Q(sku=product_identifier) | Q(name__iexact=product_identifier))
+            scope_name = f"Specific Product: {product_identifier}"
+
+        if not queryset.exists():
+            return None, {"error": "No products available in the selected scope."}, 404
+
+        totals = queryset.aggregate(
+            total_net_cost=Sum(
+                F('price') * F('current_stock'), 
+                output_field=DecimalField()
+            ),
+            total_potential_sale=Sum(
+                F('final_price') * F('current_stock'), 
+                output_field=DecimalField()
+            )
+        )
+        total_net_cost = totals['total_net_cost'] or Decimal('0.00')
+        total_potential_sale = totals['total_potential_sale'] or Decimal('0.00')
+        # ! Cálculo de Ganancia y Margen
+        potential_profit = total_potential_sale - total_net_cost
+
+        if total_potential_sale > 0:
+            profit_margin_percentage = (potential_profit / total_potential_sale) * Decimal('100.00')
+        else:
+            profit_margin_percentage = Decimal('0.00')
+
+        # ! Generación del Informe Financiero
+        report = {
+            "scope": scope_name,
+            "financial_metrics": {
+                "total_inventory_cost": round(total_net_cost, 2),
+                "total_potential_sale": round(total_potential_sale, 2),
+                "total_potential_profit": round(potential_profit, 2),
+                "profit_margin_percentage": round(profit_margin_percentage, 2)
+            }
         }
 
         return report, None, 200
