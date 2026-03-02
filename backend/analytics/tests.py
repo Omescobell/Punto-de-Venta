@@ -978,3 +978,63 @@ class InventoryValuationTests(APITestCase):
         # Caso 2: Producto que no existe
         response_not_found = self.client.get(f"{self.url}?product_identifier=FANTASMA")
         self.assertEqual(response_not_found.status_code, status.HTTP_404_NOT_FOUND)
+
+class ProductContributionTests(APITestCase):
+    
+    def setUp(self):
+        self.supplier = Supplier.objects.create(
+            name="Proveedor General", phone_number="123456789", rfc="ABC123456T1"
+        )
+        self.user = User.objects.create_superuser('admin', 'admin@test.com', 'password')
+        self.client.force_authenticate(user=self.user)
+        
+        self.product_star = Product.objects.create(name="Coca Cola 600ml",supplier_id = self.supplier.id, sku="COCA001", price=Decimal('15.00'))
+        self.product_other = Product.objects.create(name="Papas Fritas", supplier_id = self.supplier.id, sku="PAP002", price=Decimal('10.00'))
+        
+        now = timezone.now()
+        
+        # Órdenes de prueba (Venta General Total = 200.00)
+        # Orden 1: 150.00
+        self.order_1 = Order.objects.create(status='PAID', final_amount=Decimal('150.00'))
+        self.order_1.created_at = now - timedelta(days=5) # Forzar fecha
+        self.order_1.save()
+        
+        # Orden 2: 50.00
+        self.order_2 = Order.objects.create(status='PAID', final_amount=Decimal('50.00'))
+        self.order_2.created_at = now - timedelta(days=2)
+        self.order_2.save()
+        
+        # Items de la Coca Cola (Venta del producto = 100.00)
+        # Por lo tanto, contribución = 50% (100 de 200)
+        OrderItems.objects.create(order=self.order_1, product=self.product_star, quantity=5, unit_price=self.product_star.price,amount=Decimal('75.00'))
+        OrderItems.objects.create(order=self.order_2, product=self.product_star, quantity=1, unit_price=self.product_star.price,amount=Decimal('25.00'))
+        
+        # Resto de items (Papas fritas)
+        OrderItems.objects.create(order=self.order_1, product=self.product_other, quantity=5, unit_price=self.product_other.price,amount=Decimal('75.00'))
+        OrderItems.objects.create(order=self.order_2, product=self.product_other, quantity=2, unit_price=self.product_other.price,amount=Decimal('25.00'))
+        
+        self.url = '/api/analytics/product-contribution/'
+
+    def test_contribution_last_30_days_default(self):
+        """Prueba la contribución con los últimos 30 días por defecto"""
+        response = self.client.get(f"{self.url}?product_identifier=COCA001")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        metrics = response.data['contribution_metrics']
+        
+        self.assertEqual(metrics['total_general_sales'], Decimal('200.00'))
+        self.assertEqual(metrics['total_product_sales'], Decimal('100.00'))
+        self.assertEqual(metrics['contribution_percentage'], Decimal('50.00'))
+
+    def test_product_not_found(self):
+        """Prueba buscar un producto que no existe"""
+        response = self.client.get(f"{self.url}?product_identifier=FANTASMA")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], "Product not found.")
+
+    def test_no_sales_in_period(self):
+        """Prueba un rango de fechas donde no hay ventas registradas"""
+        # Buscamos en el año 2000
+        response = self.client.get(f"{self.url}?product_identifier=COCA001&start_date=2000-01-01&end_date=2000-12-31")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], "No sales recorded in the specified period.")

@@ -142,3 +142,24 @@ class AnalyticsViewSet(viewsets.ViewSet):
             return Response(error, status=status_code)
 
         return Response(report, status=status.HTTP_200_OK)
+
+    
+    @action(detail=False, methods=['get'], url_path='product-contribution')
+    def product_contribution(self, request):
+        """
+        Devuelve el porcentaje de las ventas totales que ha generado un producto.
+        """
+        product_identifier = request.query_params.get('product_identifier')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        report, error, status_code = SalesAnalyticsService.calculate_product_contribution(
+            product_identifier=product_identifier,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        if error:
+            return Response(error, status=status_code)
+
+        return Response(report, status=status.HTTP_200_OK)

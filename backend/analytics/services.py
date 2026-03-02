@@ -149,10 +149,8 @@ class SalesAnalyticsService:
         Orquestador principal. 
         Usa los submétodos para construir el informe final.
         """
-        # 1. Obtener base de datos de órdenes a utilizar (solo pagadas)
         base_orders = cls._get_orders_by_status(status='PAID')
-        
-        # 2. Validar fechas
+
         start_date, end_date, error = DateValidationService.validate_and_get_date_range(
             queryset=base_orders,
             start_date_str=start_date_str,
@@ -161,11 +159,9 @@ class SalesAnalyticsService:
             entity_name='sales'
 )
         
-        # Si hubo un error en la validación, lo retornamos inmediatamente
         if error:
             return error
 
-        # 3. Filtrar órdenes en el rango de fechas válido
         period_orders = base_orders.filter(
             created_at__date__gte=start_date,
             created_at__date__lte=end_date
@@ -182,6 +178,76 @@ class SalesAnalyticsService:
             "peak_hours": cls._calculate_hourly_stats(period_orders),
             "payment_methods": cls._calculate_payment_stats(period_orders)
         }
+
+    @staticmethod
+    def calculate_product_contribution(product_identifier, start_date=None, end_date=None):
+        if not product_identifier:
+            return None, {"error": "Product identifier is required."}, 400
+
+        # ! Validación del Producto
+        try:
+            product = Product.objects.get(Q(sku=product_identifier) | Q(name__iexact=product_identifier))
+        except Product.DoesNotExist:
+            return None, {"error": "Product not found."}, 404
+        except Product.MultipleObjectsReturned:
+            product = Product.objects.filter(Q(sku=product_identifier) | Q(name__iexact=product_identifier)).first()
+
+        # ! Definición del Período
+        if not start_date or not end_date:
+            end_date_parsed = timezone.now()
+            start_date_parsed = end_date_parsed - timedelta(days=30)
+        else:
+            start_parsed = parse_date(start_date)
+            end_parsed = parse_date(end_date)
+            
+            if not start_parsed or not end_parsed:
+                return None, {"error": "Invalid date format. Use YYYY-MM-DD."}, 400
+            # Convertimos a datetime con timezone aware (inicio del día y fin del día)
+            start_date_parsed = timezone.make_aware(datetime.combine(start_parsed, datetime.min.time()))
+            end_date_parsed = timezone.make_aware(datetime.combine(end_parsed, datetime.max.time()))
+
+        # ! Cálculo de Ventas Totales (General)
+        orders_in_period = Order.objects.filter(
+            status='PAID', 
+            created_at__range=(start_date_parsed, end_date_parsed)
+        )
+
+        total_general_sales = orders_in_period.aggregate(
+            total=Sum('final_amount')
+        )['total'] or Decimal('0.00')
+
+        if total_general_sales == Decimal('0.00'):
+            return None, {"error": "No sales recorded in the specified period."}, 404
+
+        # ! Cálculo de Ventas Totales (Producto Específico)
+        product_sales = OrderItems.objects.filter(
+            order__in=orders_in_period,
+            product=product
+        ).aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0.00')
+
+        # ! Cálculo del Porcentaje de Contribución
+        contribution_percentage = (product_sales / total_general_sales) * Decimal('100.00')
+
+        # ! Generación del Informe
+        report = {
+            "product": {
+                "sku": product.sku,
+                "name": product.name
+            },
+            "period": {
+                "start_date": start_date_parsed.strftime('%Y-%m-%d'),
+                "end_date": end_date_parsed.strftime('%Y-%m-%d')
+            },
+            "contribution_metrics": {
+                "contribution_percentage": round(contribution_percentage, 2),
+                "total_product_sales": round(product_sales, 2),
+                "total_general_sales": round(total_general_sales, 2)
+            }
+        }
+
+        return report, None, 200
     
 class DateValidationService:
     """
