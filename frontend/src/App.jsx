@@ -10,6 +10,7 @@ import Proveedores from './pages/Proveedores';
 import Metricas from './pages/Metricas';
 import MetricasProductos from './pages/MetricasProductos';
 import Chatbot from './pages/Chatbot';
+import Ticket from './pages/Ticket';
 
 // Import Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -33,6 +34,7 @@ function App() {
           <Route path="/metricas" element={<Metricas />} />
           <Route path="/metricas-productos" element={<MetricasProductos />} />
           <Route path="/chatbot" element={<Chatbot />} />
+          <Route path="/ticket" element={<Ticket />} />
         </Route>
       </Routes>
     </Router>

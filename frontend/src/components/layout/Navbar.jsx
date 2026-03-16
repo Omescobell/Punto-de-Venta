@@ -6,7 +6,7 @@ const Navbar = ({ activeItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState('');
-  
+
   useEffect(() => {
     const role = localStorage.getItem('role');
     if (role) {
@@ -70,12 +70,18 @@ const Navbar = ({ activeItem }) => {
     return item.roles.includes(normalizedRole);
   });
 
+  const userType = () => {
+    if(userRole === 'OWNER') return 'Dueño';
+    if(userRole === 'ADMIN') return 'Administrador';
+    if(userRole === 'EMPLOYEE') return 'Empleado';
+  };
+
   return (
     <header className={`header-container ${normalizedRole.toLowerCase()}-theme`}>
       <div className="Superior">
         <div className="user-info-display">
             {/* Opcional: Mostrar rol o usuario */}
-            <span className="role-badge">{userRole}</span>
+            <span className="role-badge">{userType()}</span>
         </div>
         <div className="logout-section">
             <h4>Cerrar Sesión</h4>

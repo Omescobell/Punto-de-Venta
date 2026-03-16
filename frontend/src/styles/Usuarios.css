@@ -1,2 +1,21 @@
-/* CSS limpiado - Estilos manejados en General.css */
-/* Este archivo puede eliminarse si no contiene estilos específicos en el futuro */
+.Input-Number-Container {
+    display: flex;
+    gap: 10px;
+    flex-direction: row;
+}
+
+.Input-Number-Container select {
+    width: 15%;
+    color: black;
+    margin-right: 0%;
+}
+
+.Input-Number-Container input {
+    width: 90%;
+    margin-left: 0%;
+}
+
+.Input-Number-Container input:focus {
+    outline: none;
+    border-color: #007bff;
+}

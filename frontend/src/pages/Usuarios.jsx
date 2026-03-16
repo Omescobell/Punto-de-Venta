@@ -350,13 +350,41 @@ const Usuarios = () => {
                 <div className="row mb-4">
                   <div className="col-md-6">
                     <label htmlFor="phone_number" className="form-label">Teléfono</label>
+                  <div class="Input-Number-Container">
+                    <select>
+                      <option value="">Seleccionar...</option>
+                      <option value="1">+1 (Estados Unidos)</option>
+                      <option value="1">+1 (Canada)</option>
+                      <option value="34">+34 (España)</option>
+                      <option value="51">+51 (Peru)</option>
+                      <option value="52">+52 (Mexico)</option>
+                      <option value="53">+53 (Cuba)</option>
+                      <option value="54">+54 (Argentina)</option>
+                      <option value="55">+55 (Brasil)</option>
+                      <option value="57">+57 (Colombia)</option>
+                      <option value="58">+58 (Venezuela)</option>
+                      <option value="503">+503 (El Salvador)</option>
+                      <option value="504">+504 (Honduras)</option>
+                      <option value="505">+505 (Nicaragua)</option>
+                      <option value="506">+506 (Costa Rica)</option>
+                      <option value="507">+507 (Panama)</option>
+                      <option value="508">+508 (Republica Dominicana)</option>
+                      <option value="509">+509 (Haiti)</option>
+                      <option value="591">+591 (Bolivia)</option>
+                      <option value="593">+593 (Ecuador)</option>
+                      <option value="595">+595 (Paraguay)</option>
+                      <option value="598">+598 (Uruguay)</option>
+                      <option value="599">+599 (Curazao)</option>
+                    </select>
                     <input 
-                      type="text" 
-                      className="form-control" 
-                      id="phone_number"
-                      value={formData.phone_number}
-                      onChange={handleInputChange}
-                    />
+                    type="number" 
+                    className="form-control"
+                    id="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="15512345678"
+                  />
+                  </div>
                   </div>
                   <div className="col-md-6">
                     <label htmlFor="address" className="form-label">Dirección</label>

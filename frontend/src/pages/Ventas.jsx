@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import SearchBar from "../components/layout/SearchBar";
 import ActionButtons from "../components/common/ActionButtons"; // Using for Trash Icon
@@ -26,6 +27,8 @@ const Ventas = () => {
   const [cart, setCart] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [createdOrder, setCreatedOrder] = useState(null); // Stores the order response from backend
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
@@ -181,10 +184,22 @@ const Ventas = () => {
       if (response.ok) {
         alert("Pago procesado correctamente. Venta finalizada.");
         // Reset Logic
-        setCart([]);
-        setCreatedOrder(null);
+        // setCart([]); // Removed reset here to keep data for ticket
+        // setCreatedOrder(null);
         setSelectedCustomerId("");
         setPaymentAmount("");
+
+        // Navigate to Ticket
+        navigate("/ticket", {
+          state: {
+            order: data.order || createdOrder, // Depending on backend response structure
+            items: cart,
+            paymentMethod: method,
+            paymentAmount: paymentAmount,
+          },
+        });
+        setCart([]);
+        setCreatedOrder(null);
       } else {
         console.error("Payment failed:", data);
         let msg = "Error al procesar el pago";

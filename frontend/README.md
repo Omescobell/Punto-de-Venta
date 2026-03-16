@@ -1,16 +1,41 @@
-# React + Vite
+# Front Documentation
+
+## React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
+**Start Server** ´/frontend/´ server npm run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+#### Login
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Use of credentials to send de acces to de api route '/api/auth/login/'
+Crendentials: email,password
+Succesful = send to Ventas.jsx View and send **Usertype**
+Fail = Error mesaje
 
-## Expanding the ESLint configuration
+### Users View
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Owner: Full Access
+Admin: Full Access
+User/Employe: Ventas, Clientes , Inventario
+
+### Users
+
+Form: username , email, password, first_name, last_name, address, role, phone number.
+
+if the Usertype is employe or the sesion is over show a messaje to **Access denied or Sesion out of time **
+
+### Chatbot
+
+Form: Existent_user , phone number.
+
+If the Usertype is employe or the sesion is over show a messaje to **Access denied or Sesion out of time **
+
+### Ventas
+
+Show all products and quantity
+Show seletion of diferent clients and in base option is 'Cliente Visitante'
+
+Pay methots: 'Cash, Card, Credit'

@@ -1,0 +1,73 @@
+@media screen {
+    .ticket-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+}
+
+@media print {
+    /* Setup page for thermal printer (approx 80mm) */
+    @page {
+        margin: 0;
+        size: 80mm auto;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .Main-Container {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+    }
+
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 5mm !important;
+    }
+
+    .ticket-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .card {
+        border: none !important;
+    }
+
+    /* Optimize table for narrow receipt width */
+    .table {
+        font-size: 10pt;
+        width: 100% !important;
+    }
+
+    .table th, .table td {
+        padding: 2px !important;
+    }
+
+    h1 { font-size: 16pt !important; margin-bottom: 5px !important; }
+    h3 { font-size: 14pt !important; }
+    p, div { font-size: 10pt !important; }
+
+    hr {
+            border-top: 1px dashed #000 !important;
+        margin: 10px 0 !important;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: transparent !important;
+    }
+}
