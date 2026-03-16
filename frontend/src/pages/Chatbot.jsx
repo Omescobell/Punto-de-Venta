@@ -19,6 +19,7 @@ const Chatbot = () => {
   // Form State
   const initialFormState = {
     employee_name: '', // We store the name string as confirmed by plan
+    prefix: '',
     phone: '' // Maps to mobile_number
   };
   const [formData, setFormData] = useState(initialFormState);
@@ -93,8 +94,8 @@ const Chatbot = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.employee_name || !formData.phone) {
-      alert('Por favor seleccione un empleado e ingrese el teléfono');
+    if (!formData.employee_name || !formData.prefix || !formData.phone) {
+      alert('Por favor seleccione un empleado, prefijo e ingrese el teléfono');
       return;
     }
 
@@ -102,7 +103,7 @@ const Chatbot = () => {
       const token = localStorage.getItem('access_token');
       const payload = {
         name: formData.employee_name,
-        mobile_number: formData.phone
+        mobile_number: `${formData.prefix}${formData.phone.replace(/[^0-9]/g, '')}`
       };
 
       const response = await fetch('/api/chatbotusers/', {
@@ -244,8 +245,12 @@ const Chatbot = () => {
                 
                 <div className="row mb-3">
                   <label className="form-label">Telefono vinculado</label>
-                  <div class="Input-Number-Container">
-                    <select>
+                  <div className="Input-Number-Container">
+                    <select
+                      id="prefix"
+                      value={formData.prefix}
+                      onChange={handleInputChange}
+                    >
                       <option value="">Seleccionar...</option>
                       <option value="1">+1 (Estados Unidos)</option>
                       <option value="1">+1 (Canada)</option>

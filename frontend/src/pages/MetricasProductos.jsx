@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SubHeader from '../components/layout/SubHeader';
 import { Chart } from 'chart.js/auto'; // Import Chart.js
@@ -14,20 +14,81 @@ const MetricasProductos = () => {
     { name: 'Productos', path: '/metricas-productos' }
   ];
 
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [criterion, setCriterion] = useState('most'); // 'most', 'least', 'both' etc. Custom select has 'Mas Vendidos' or 'Menos Vendidos'
+  const [productData, setProductData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const fetchProductRanking = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      let url = '/api/analytics/product-ranking/';
+      const params = new URLSearchParams();
+      params.append('limit', '5'); // Fetch top 5
+      if (criterion) params.append('criterion', criterion);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al cargar métricas de productos');
+      }
+
+      const data = await response.json();
+      // The API returns most_sold or least_sold array based on criterion, or if no items: simple detail object.
+      let items = [];
+      if (data.results) {
+         if (criterion === 'most') {
+             items = data.results.most_sold || [];
+         } else if (criterion === 'least') {
+             items = data.results.least_sold || [];
+         }
+      }
+      setProductData(items);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (chartRef.current) {
+    fetchProductRanking();
+  }, [startDate, endDate, criterion]);
+
+  useEffect(() => {
+    if (chartRef.current && productData?.length > 0) {
       // Destroy previous instance if exists
       if (chartInstance.current) {
         chartInstance.current.destroy();
       }
 
       const ctx = chartRef.current.getContext('2d');
+      const labels = productData.map(p => p.product_name);
+      // We can use units_sold or revenue. Let's use revenue for consistency with sales.
+      const dataValues = productData.map(p => parseFloat(p.revenue));
+
       chartInstance.current = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Producto 1', 'Producto 2', 'Producto 3', 'Producto 4', 'Producto 5'],
+            labels: labels,
             datasets: [{
-                data: [300, 150, 100, 80, 50],
+                data: dataValues,
                 backgroundColor: [
                     '#E74C3C', // Rojo
                     '#F39C12', // Naranja
@@ -44,10 +105,30 @@ const MetricasProductos = () => {
             plugins: {
                 legend: {
                     position: 'bottom', // Adjusted to visible
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.label || '';
+                      if (label) {
+                        label += ': ';
+                      }
+                      if (context.parsed !== null) {
+                        label += new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(context.parsed);
+                      }
+                      return label;
+                    }
+                  }
                 }
             }
         }
       });
+    } else if (chartRef.current && productData?.length === 0) {
+      // Clear chart if no data
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+        chartInstance.current = null;
+      }
     }
 
     return () => {
@@ -55,7 +136,7 @@ const MetricasProductos = () => {
         chartInstance.current.destroy();
       }
     };
-  }, []);
+  }, [productData]);
 
   return (
     <>
@@ -83,21 +164,34 @@ const MetricasProductos = () => {
                     <div className="col-6">
                         <label className="date-label">Fecha de inicio</label>
                         <div className="date-group">
-                            <input type="date" className="date-input-box" placeholder="DD" />
+                            <input 
+                              type="date" 
+                              className="date-input-box" 
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                            />
                         </div>
                     </div>
                     <div className="col-6">
                         <label className="date-label">Fecha de Fin</label>
                         <div className="date-group">
-                            <input type="date" className="date-input-box" placeholder="DD" />
+                            <input 
+                              type="date" 
+                              className="date-input-box" 
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                            />
                         </div>
                     </div>
                 </div>
 
-                <select className="selecter mb-4">
-                    <option value="">Todos</option>
-                    <option value="">Mas Vendidos</option>
-                    <option value="">Menos Vendidos</option>
+                <select 
+                  className="selecter mb-4" 
+                  value={criterion} 
+                  onChange={(e) => setCriterion(e.target.value)}
+                >
+                    <option value="most">Mas Vendidos</option>
+                    <option value="least">Menos Vendidos</option>
                 </select>
                 
                 {/* Tabla */}
@@ -111,9 +205,20 @@ const MetricasProductos = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>Producto 1</td><td>$300</td></tr>
-                            <tr><td>Producto 2</td><td>$150</td></tr>
-                            <tr><td>Producto 3</td><td>$100</td></tr>
+                            {loading ? (
+                              <tr><td colSpan="2" className="text-center">Cargando...</td></tr>
+                            ) : error ? (
+                              <tr><td colSpan="2" className="text-center text-danger">{error}</td></tr>
+                            ) : productData.length > 0 ? (
+                              productData.map((item, index) => (
+                                <tr key={item.product__id || index}>
+                                  <td>{item.product_name} (<small>{item.units_sold} uds</small>)</td>
+                                  <td>${parseFloat(item.revenue).toFixed(2)}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr><td colSpan="2" className="text-center">No hay datos para este periodo</td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
