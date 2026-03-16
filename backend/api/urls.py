@@ -8,6 +8,7 @@ from customers.urls import router as customer_router
 from products.urls import router as products_router
 from orders.urls import router as orders_router
 from chatbot.urls import router as chatbot_router
+from analytics.urls import router as analytics_router
 
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import MyTokenObtainPairView
@@ -20,10 +21,11 @@ master_router.registry.extend(customer_router.registry)
 master_router.registry.extend(products_router.registry)
 master_router.registry.extend(orders_router.registry)
 master_router.registry.extend(chatbot_router.registry)
+master_router.registry.extend(analytics_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    #Ruta maestra con todas las rutas de las apps (users,suppliers,customers,products)
+    #Ruta maestra con todas las rutas de las apps (users,suppliers,customers,products,chatbot,analytics)
     path('api/', include(master_router.urls)),
 
     path('api/api-auth/', include('rest_framework.urls')),
