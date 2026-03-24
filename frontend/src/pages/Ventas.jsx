@@ -257,7 +257,7 @@ const Ventas = () => {
                 </div>
 
                 {/* Product List */}
-                <div className="Product_List_Container flex-grow-1">
+                <div className="Product_List_Container ">
                   <div className="Product_List h-100">
                     {loading ? (
                       <p className="text-center">Cargando productos...</p>

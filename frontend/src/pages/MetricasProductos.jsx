@@ -45,7 +45,13 @@ const MetricasProductos = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Error al cargar métricas de productos');
+        let errorMsg = 'Error al cargar métricas de productos';
+        try {
+          const errData = await response.json();
+          if (errData.error) errorMsg = errData.error;
+          else if (typeof errData === 'string') errorMsg = errData;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();

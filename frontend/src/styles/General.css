@@ -1,16 +1,5 @@
 /* Fix Modal Stacking Context */
-.modal-backdrop {
-    z-index: 1040 !important;
-}
 
-.modal {
-    z-index: 1050 !important;
-}
-
-.modal-dialog {
-    z-index: 1060 !important;
-    max-width: 800px !important; /* Make modals wider by default */
-}
 
 .app-container {
     background-color: #F5F5F5; /* Fondo gris claro */
