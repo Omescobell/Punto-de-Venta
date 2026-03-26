@@ -6,6 +6,7 @@ const Navbar = ({ activeItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem('role');
@@ -63,8 +64,7 @@ const Navbar = ({ activeItem }) => {
     // Si no hay rol (no logueado), no mostrar nada
     if (!normalizedRole){
       return false;
-      navigate('/login');
-    };
+    }
 
     // Si el item permite el rol actual, mostrarlo
     return item.roles.includes(normalizedRole);
@@ -74,33 +74,68 @@ const Navbar = ({ activeItem }) => {
     if(userRole === 'OWNER') return 'Dueño';
     if(userRole === 'ADMIN') return 'Administrador';
     if(userRole === 'EMPLOYEE') return 'Empleado';
+    return '';
   };
 
   return (
-    <header className={`header-container ${normalizedRole.toLowerCase()}-theme`}>
-      <div className="Superior">
-        <div className="user-info-display">
-            {/* Opcional: Mostrar rol o usuario */}
-            <span className="role-badge">{userType()}</span>
+    <header className="w-full bg-white shadow-sm font-sans relative z-40 mb-6">
+      {/* Top Bar: User Info & Logout */}
+      <div className="flex flex-row justify-between items-center px-4 md:px-8 py-3 bg-[#f8f9fa] border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          {userType() && (
+            <span className="bg-blue-100 text-blue-800 text-xs md:text-sm font-bold px-3 py-1 rounded-full border border-blue-200 tracking-wide uppercase">
+              {userType()}
+            </span>
+          )}
         </div>
-        <div className="logout-section">
-            <h4>Cerrar Sesión</h4>
-            <button className="button_logout" onClick={handleLogout} aria-label="Cerrar sesión">
-            <i className="bi bi-box-arrow-right"></i>
-            </button>
+        <div className="flex items-center gap-4">
+          <h4 className="hidden md:block m-0 text-gray-600 font-medium text-sm">Cerrar Sesión</h4>
+          <button 
+            className="text-gray-600 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 flex items-center justify-center"
+            onClick={handleLogout} 
+            aria-label="Cerrar sesión"
+          >
+            <i className="bi bi-box-arrow-right text-xl md:text-2xl"></i>
+          </button>
         </div>
       </div>
-      <nav className={`custom-navbar ${normalizedRole.toLowerCase()}-nav`}>
-        <ul className="nav-list">
-          {visibleItems.map((item) => (
-            <li 
-              key={item.path} 
-              className={`nav-item ${location.pathname === item.path || activeItem === item.name ? 'active' : ''}`}
+
+      {/* Navigation Bar */}
+      <nav className="px-4 md:px-8 py-3 md:py-4 bg-white transition-all duration-300">
+        <div className="flex justify-between items-center lg:hidden">
+            <span className="text-lg font-bold text-gray-800 tracking-tight">Menú Principal</span>
+            {/* Hamburger Button */}
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="text-gray-600 focus:outline-none p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <Link to={item.path}>{item.name}</Link>
-            </li>
-          ))}
-        </ul>
+              <i className={`bi ${isMenuOpen ? 'bi-x-lg' : 'bi-list'} text-3xl leading-none`}></i>
+            </button>
+        </div>
+
+        {/* Links List */}
+        <div className={`${isMenuOpen ? 'block' : 'hidden'} lg:block w-full mt-4 lg:mt-0`}>
+          <ul className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-center items-center gap-2 lg:gap-6 p-0 m-0 list-none w-full">
+            {visibleItems.map((item) => {
+              const isActive = location.pathname === item.path || activeItem === item.name;
+              return (
+                <li key={item.path} className="w-full lg:w-auto text-center">
+                  <Link 
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`block lg:inline-block px-4 py-3 lg:py-2 lg:px-6 rounded-lg text-[18px] lg:text-[22px] font-medium transition-all duration-300 w-full lg:w-auto ${
+                      isActive 
+                        ? 'bg-gray-200 text-gray-900 shadow-inner' 
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       </nav>
     </header>
   );

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
 import Navbar from '../components/layout/Navbar';
 import SubHeader from '../components/layout/SubHeader';
-import '../styles/Metricas-Ventas.css';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -160,39 +159,37 @@ const Metricas = () => {
   }, [salesData]);
 
   return (
-    <>
+    <div className="min-h-screen bg-[#F5F5F5]">
       <Navbar activeItem="Métricas" />
       <SubHeader items={subHeaderItems} activeItem="Ventas" />
       
-      <div className="Main-Container">
-        <div className="row">
-          <div className="col-12">
-            <h1 className="periodo-title">Periodo</h1>
-          </div>
+      <div className="px-[5%] pb-[50px]">
+        <div className="w-full">
+          <h1 className="text-[48px] font-bold mb-[20px] text-[#1a1a1a]">Periodo</h1>
         </div>
 
-        <div className="row">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Left Column: Date Inputs and Table */}
-          <div className="col-md-5 col-lg-4">
+          <div className="md:col-span-5 lg:col-span-4">
             {/* Date Inputs */}
-            <div className="row mb-5">
-              <div className="col-6">
-                <label className="date-label">Fecha de inicio</label>
-                <div className="date-group">
+            <div className="flex flex-row justify-between gap-4 mb-10 w-full">
+              <div className="flex-1">
+                <label className="text-[14px] text-[#555] mb-[5px] block font-medium text-black">Fecha de inicio</label>
+                <div className="flex gap-[10px]">
                   <input 
                     type="date" 
-                    className="date-input-box" 
+                    className="bg-white border border-[#ddd] rounded-[5px] p-[8px] text-center w-full max-w-[160px] text-[14px] outline-none focus:ring-2 focus:ring-blue-400 text-black" 
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
               </div>
-              <div className="col-6">
-                <label className="date-label">Fecha de Fin</label>
-                <div className="date-group">
+              <div className="flex-1">
+                <label className="text-[14px] text-[#555] mb-[5px] block font-medium text-black">Fecha de Fin</label>
+                <div className="flex gap-[10px]">
                   <input 
                     type="date" 
-                    className="date-input-box" 
+                    className="bg-white border border-[#ddd] rounded-[5px] p-[8px] text-center w-full max-w-[160px] text-[14px] outline-none focus:ring-2 focus:ring-blue-400 text-black" 
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                   />
@@ -201,28 +198,32 @@ const Metricas = () => {
             </div>
 
             {/* Table */}
-            <div className="tabla-container">
-              <table className="custom-table">
+            <div className="mt-10 overflow-x-auto">
+              <table className="w-full border-collapse border border-[#888] shadow-sm">
                 <thead>
                   <tr>
-                    <th>Ventas</th>
-                    <th>Dinero</th>
+                    <th className="bg-[#EAEAEA] p-[15px] text-left text-[20px] sm:text-[24px] font-bold border border-[#888] w-[50%]">Ventas</th>
+                    <th className="bg-[#EAEAEA] p-[15px] text-left text-[20px] sm:text-[24px] font-bold border border-[#888] w-[50%]">Dinero</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="2" className="text-center">Cargando...</td></tr>
+                    <tr><td colSpan="2" className="text-center bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium">Cargando...</td></tr>
                   ) : error ? (
-                    <tr><td colSpan="2" className="text-center text-danger">{error}</td></tr>
+                    <tr><td colSpan="2" className="text-center text-red-600 bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium">{error}</td></tr>
                   ) : salesData?.payment_methods?.length > 0 ? (
                     salesData.payment_methods.map((method, index) => (
                       <tr key={index}>
-                        <td>{method.payment_method === 'CASH' ? 'Efectivo' : method.payment_method === 'CARD' ? 'Tarjeta' : method.payment_method === 'TRANSFER' ? 'Transferencia' : method.payment_method} ({method.total_sales})</td>
-                        <td>${parseFloat(method.accumulated_amount).toFixed(2)}</td>
+                        <td className="bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium text-gray-800">
+                          {method.payment_method === 'CASH' ? 'Efectivo' : method.payment_method === 'CARD' ? 'Tarjeta' : method.payment_method === 'TRANSFER' ? 'Transferencia' : method.payment_method} ({method.total_sales})
+                        </td>
+                        <td className="bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium text-gray-800">
+                          ${parseFloat(method.accumulated_amount).toFixed(2)}
+                        </td>
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan="2" className="text-center">No hay datos para este periodo</td></tr>
+                    <tr><td colSpan="2" className="text-center bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium text-gray-500">No hay datos para este periodo</td></tr>
                   )}
                 </tbody>
               </table>
@@ -230,14 +231,14 @@ const Metricas = () => {
           </div>
 
           {/* Right Column: Chart */}
-          <div className="col-md-7 col-lg-8">
-            <div className="chart-container">
+          <div className="md:col-span-7 lg:col-span-8">
+            <div className="relative h-[400px] w-full mt-5 md:mt-0 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
               <canvas ref={chartRef} id="salesChart"></canvas>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

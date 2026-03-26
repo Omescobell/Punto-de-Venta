@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SubHeader from '../components/layout/SubHeader';
 import { Chart } from 'chart.js/auto'; // Import Chart.js
-import '../styles/Metricas-Productos.css';
 
 const MetricasProductos = () => {
   const chartRef = useRef(null);
@@ -145,45 +144,39 @@ const MetricasProductos = () => {
   }, [productData]);
 
   return (
-    <>
-      <Navbar activeItem="Metricas" />
-      {/* Use standard SubHeader component for consistency, overriding active item */}
-      {/* Actually, custom HTML had specific structure. Let's try to use the reusable SubHeader if possible, 
-          but the HTML has "Ventas" and "Productos" as sub-items. 
-          Our SubHeader component supports items prop. */}
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <Navbar activeItem="Métricas" />
       <SubHeader items={subHeaderItems} activeItem="Productos" />
 
-      <div className="Main-Container">
+      <div className="px-[5%] pb-[50px]">
         {/* Título Periodo */}
-        <div className="row">
-            <div className="col-12">
-                <h1 className="periodo-title">Periodo</h1>
-            </div>
+        <div className="w-full">
+            <h1 className="text-[48px] font-bold mb-[20px] text-[#1a1a1a]">Periodo</h1>
         </div>
 
-        <div className="row">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             {/* Columna Izquierda: Inputs y Tabla */}
-            <div className="col-md-5 col-lg-4">
+            <div className="md:col-span-5 lg:col-span-4">
                 
                 {/* Inputs de Fecha */}
-                <div className="row mb-5">
-                    <div className="col-6">
-                        <label className="date-label">Fecha de inicio</label>
-                        <div className="date-group">
+                <div className="flex flex-row justify-between gap-4 mb-10 w-full">
+                    <div className="flex-1">
+                        <label className="text-[14px] text-[#555] mb-[5px] block font-medium">Fecha de inicio</label>
+                        <div className="flex gap-[10px]">
                             <input 
                               type="date" 
-                              className="date-input-box" 
+                              className="bg-white border border-[#ddd] rounded-[5px] p-[8px] text-center w-full max-w-[160px] text-[14px] outline-none focus:ring-2 focus:ring-blue-400 text-black" 
                               value={startDate}
                               onChange={(e) => setStartDate(e.target.value)}
                             />
                         </div>
                     </div>
-                    <div className="col-6">
-                        <label className="date-label">Fecha de Fin</label>
-                        <div className="date-group">
+                    <div className="flex-1">
+                        <label className="text-[14px] text-[#555] mb-[5px] block font-medium">Fecha de Fin</label>
+                        <div className="flex gap-[10px]">
                             <input 
                               type="date" 
-                              className="date-input-box" 
+                              className="bg-white border border-[#ddd] rounded-[5px] p-[8px] text-center w-full max-w-[160px] text-[14px] outline-none focus:ring-2 focus:ring-blue-400 text-black" 
                               value={endDate}
                               onChange={(e) => setEndDate(e.target.value)}
                             />
@@ -192,38 +185,41 @@ const MetricasProductos = () => {
                 </div>
 
                 <select 
-                  className="selecter mb-4" 
+                  className="w-full h-12 bg-white border border-[#ddd] rounded-lg p-2 text-center text-[15px] outline-none focus:ring-2 focus:ring-blue-400 font-medium mb-8 shadow-sm cursor-pointer text-black" 
                   value={criterion} 
                   onChange={(e) => setCriterion(e.target.value)}
                 >
-                    <option value="most">Mas Vendidos</option>
+                    <option value="most">Más Vendidos</option>
                     <option value="least">Menos Vendidos</option>
                 </select>
                 
                 {/* Tabla */}
-                <div className="tabla-container">
-                    {/* Using Custom-Table from General.css for consistency */}
-                    <table className="table table-bordered Custom-Table">
+                <div className="mt-8 overflow-x-auto">
+                    <table className="w-full border-collapse border border-[#888] shadow-sm">
                         <thead>
                             <tr>
-                                <th>Producto</th>
-                                <th>Promedio de Ventas</th>
+                                <th className="bg-[#EAEAEA] p-[15px] text-left text-[18px] sm:text-[22px] font-bold border border-[#888] w-[50%]">Producto</th>
+                                <th className="bg-[#EAEAEA] p-[15px] text-left text-[18px] sm:text-[22px] font-bold border border-[#888] w-[50%]">Total de Ingresos</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                              <tr><td colSpan="2" className="text-center">Cargando...</td></tr>
+                              <tr><td colSpan="2" className="text-center bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium">Cargando...</td></tr>
                             ) : error ? (
-                              <tr><td colSpan="2" className="text-center text-danger">{error}</td></tr>
+                              <tr><td colSpan="2" className="text-center text-red-600 bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium">{error}</td></tr>
                             ) : productData.length > 0 ? (
                               productData.map((item, index) => (
-                                <tr key={item.product__id || index}>
-                                  <td>{item.product_name} (<small>{item.units_sold} uds</small>)</td>
-                                  <td>${parseFloat(item.revenue).toFixed(2)}</td>
+                                <tr key={item.product__id || index} className="hover:bg-gray-50">
+                                  <td className="bg-white h-[50px] border border-[#888] px-4 py-2 font-medium text-gray-800">
+                                    {item.product_name} <br/><span className="text-gray-500 text-sm font-normal">({item.units_sold} unidades)</span>
+                                  </td>
+                                  <td className="bg-white h-[50px] border border-[#888] px-4 font-medium text-gray-800">
+                                    ${parseFloat(item.revenue).toFixed(2)}
+                                  </td>
                                 </tr>
                               ))
                             ) : (
-                              <tr><td colSpan="2" className="text-center">No hay datos para este periodo</td></tr>
+                              <tr><td colSpan="2" className="text-center bg-[#EAEAEA] h-[50px] border border-[#888] px-4 font-medium text-gray-500">No hay datos para este periodo</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -231,14 +227,14 @@ const MetricasProductos = () => {
             </div>
 
             {/* Columna Derecha: Gráfica */}
-            <div className="col-md-7 col-lg-8">
-                <div className="chart-container">
+            <div className="md:col-span-7 lg:col-span-8">
+                <div className="relative h-[400px] w-full mt-5 md:mt-0 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <canvas ref={chartRef}></canvas>
                 </div>
             </div>
         </div>
     </div>
-    </>
+    </div>
   );
 };
 

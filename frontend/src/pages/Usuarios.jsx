@@ -46,15 +46,6 @@ const Usuarios = () => {
         setLoading(false);
         return;
       }
-
-      // Check if we are using the /auth or /api proxy. 
-      // Based on previous login debugging, endpoints are at /api/users/ or similar?
-      // Re-reading: Login was at /auth/login. Users are at /users/. 
-      // The proxy /api -> target/api handles /api/users/ which maps to target/api/users/.
-      // But wait, the backend README said:
-      // Endpoint: /users/
-      // Base URL: /api/
-      // So valid URL is /api/users/
       
       const response = await fetch('/api/users/', {
         headers: {
@@ -203,40 +194,37 @@ const Usuarios = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button 
-            className="button_add" 
-            onClick={openAddModal}
-          >
+          <button className="button_add" onClick={openAddModal}>
             <i className="bi bi-plus-lg"></i>
           </button>
         </div>
 
-        <div className="Table-Wrapper">
-          {error && <div className="alert alert-danger m-3">{error}</div>}
+        <div className="w-full sm:w-[90%] sm:max-w-[1200px] mx-auto overflow-x-auto pb-4 px-2 sm:px-0">
+          {error && <div className="bg-[#f8d7da] border border-[#f5c6cb] text-[#721c24] px-4 py-3 rounded mb-3">{error}</div>}
           
-          <table className="table table-bordered Custom-Table">
+          <table className="w-full bg-white border border-[#dee2e6] text-left border-collapse min-w-[700px]">
             <thead>
               <tr>
-                <th>Nombre Completo</th>
-                <th>Usuario</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th style={{ width: '200px' }}>Acciones</th>
+                <th className="bg-[#f2f2f2] text-[#333] font-bold text-[14px] md:text-[18px] align-middle border-b-2 border-[#ddd] h-[50px] px-2 md:pl-[15px] whitespace-nowrap">Nombre Completo</th>
+                <th className="bg-[#f2f2f2] text-[#333] font-bold text-[14px] md:text-[18px] align-middle border-b-2 border-[#ddd] h-[50px] px-2 md:pl-[15px] whitespace-nowrap">Usuario</th>
+                <th className="bg-[#f2f2f2] text-[#333] font-bold text-[14px] md:text-[18px] align-middle border-b-2 border-[#ddd] h-[50px] px-2 md:pl-[15px] whitespace-nowrap">Correo</th>
+                <th className="bg-[#f2f2f2] text-[#333] font-bold text-[14px] md:text-[18px] align-middle border-b-2 border-[#ddd] h-[50px] px-2 md:pl-[15px] whitespace-nowrap">Rol</th>
+                <th className="bg-[#f2f2f2] text-[#333] font-bold text-[14px] md:text-[18px] align-middle border-b-2 border-[#ddd] h-[50px] px-2 md:pl-[15px] whitespace-nowrap" style={{ width: '200px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="5" className="text-center">Cargando...</td></tr>
+                <tr><td colSpan="5" className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-center text-[#212529]">Cargando...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan="5" className="text-center">No se encontraron usuarios</td></tr>
+                <tr><td colSpan="5" className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-center text-[#212529]">No se encontraron usuarios</td></tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.id}>
-                    <td>{user.first_name} {user.last_name}</td>
-                    <td>{user.username}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-[14px] md:text-base text-[#212529] whitespace-nowrap">{user.first_name} {user.last_name}</td>
+                    <td className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-[14px] md:text-base text-[#212529] whitespace-nowrap">{user.username}</td>
+                    <td className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-[14px] md:text-base text-[#212529] whitespace-nowrap">{user.email}</td>
+                    <td className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-[14px] md:text-base text-[#212529] whitespace-nowrap">{user.role}</td>
+                    <td className="bg-white h-[60px] align-middle px-2 py-2 md:pl-[15px] border-b border-[#eee] text-[14px] md:text-base text-[#212529] whitespace-nowrap">
                       <ActionButtons 
                         onEdit={() => handleEdit(user)} 
                         onDelete={() => handleDelete(user.id)} 
@@ -250,37 +238,37 @@ const Usuarios = () => {
         </div>
       </div>
 
-      {/* Add User Modal */}
-      <div className={`modal fade ${showModal ? 'show' : ''}`} 
-           style={{ display: showModal ? 'block' : 'none', backgroundColor: 'rgba(0,0,0,0.5)' }}
-           tabIndex="-1">
-        <div className="modal-dialog modal-dialog-centered modal-lg"> {/* Increased size for more fields */}
-          <div className="modal-content Custom-Modal-Style">
-            <div className="modal-body">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="text-center m-0 w-100">{editingUserId ? 'Editar Usuario' : 'Agregar Usuario'}</h2>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+      {/* Add/Edit User Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity p-4 sm:p-0" tabIndex="-1">
+          <div className="w-full max-w-4xl sm:mx-4 relative bg-[#b2b2b2] rounded-[10px] sm:rounded-[20px] p-4 sm:p-[30px] my-auto max-h-[95vh] overflow-y-auto shadow-2xl">
+            <div className="bg-white rounded-[10px] sm:rounded-[20px] p-4 sm:p-[30px] w-full">
+              <div className="flex justify-between flex-row items-center mb-6 sm:mb-[30px]">
+                <h2 className="text-center font-bold text-[#1e1e1e] text-xl sm:text-3xl w-full m-0">
+                  {editingUserId ? 'Editar Usuario' : 'Agregar Usuario'}
+                </h2>
+                <button type="button" className="text-2xl sm:text-3xl font-bold bg-transparent border-none cursor-pointer absolute right-4 sm:right-[45px]" onClick={() => setShowModal(false)}>&times;</button>
               </div>
               
               <form onSubmit={handleSubmit}>
                 {/* Row 1: Names */}
-                <div className="row mb-3">
-                  <div className="col-md-6">
-                    <label htmlFor="first_name" className="form-label">Nombre(s) *</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="first_name" className="block font-medium text-[#333] mb-1">Nombre(s) *</label>
                     <input 
                       type="text" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="first_name" 
                       value={formData.first_name}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label htmlFor="last_name" className="form-label">Apellidos *</label>
+                  <div>
+                    <label htmlFor="last_name" className="block font-medium text-[#333] mb-1">Apellidos *</label>
                     <input 
                       type="text" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="last_name" 
                       value={formData.last_name}
                       onChange={handleInputChange}
@@ -290,23 +278,23 @@ const Usuarios = () => {
                 </div>
 
                 {/* Row 2: Account Info */}
-                <div className="row mb-3">
-                  <div className="col-md-6">
-                    <label htmlFor="username" className="form-label">Nombre de Usuario *</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="username" className="block font-medium text-[#333] mb-1">Nombre de Usuario *</label>
                     <input 
                       type="text" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="username" 
                       value={formData.username}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label htmlFor="email" className="form-label">Correo Electrónico *</label>
+                  <div>
+                    <label htmlFor="email" className="block font-medium text-[#333] mb-1">Correo Electrónico *</label>
                     <input 
                       type="email" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="email" 
                       value={formData.email}
                       onChange={handleInputChange}
@@ -316,14 +304,14 @@ const Usuarios = () => {
                 </div>
 
                 {/* Row 3: Security & Role */}
-                <div className="row mb-3">
-                  <div className="col-md-6">
-                    <label htmlFor="password" className="form-label">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="password" className="block font-medium text-[#333] mb-1">
                       Contraseña {editingUserId ? '(Opcional)' : '*'}
                     </label>
                     <input 
                       type="password" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="password" 
                       value={formData.password}
                       onChange={handleInputChange}
@@ -331,10 +319,10 @@ const Usuarios = () => {
                       placeholder={editingUserId ? 'Dejar en blanco para mantener actual' : ''}
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label htmlFor="role" className="form-label">Rol *</label>
+                  <div>
+                    <label htmlFor="role" className="block font-medium text-[#333] mb-1">Rol *</label>
                     <select 
-                      className="form-select"
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]"
                       id="role"
                       value={formData.role}
                       onChange={handleInputChange}
@@ -347,50 +335,50 @@ const Usuarios = () => {
                 </div>
 
                 {/* Row 4: Contact Info (Optional) */}
-                <div className="row mb-4">
-                  <div className="col-md-6">
-                    <label htmlFor="phone_number" className="form-label">Teléfono</label>
-                  <div class="Input-Number-Container">
-                    <select>
-                      <option value="">Seleccionar...</option>
-                      <option value="1">+1 (Estados Unidos)</option>
-                      <option value="1">+1 (Canada)</option>
-                      <option value="34">+34 (España)</option>
-                      <option value="51">+51 (Peru)</option>
-                      <option value="52">+52 (Mexico)</option>
-                      <option value="53">+53 (Cuba)</option>
-                      <option value="54">+54 (Argentina)</option>
-                      <option value="55">+55 (Brasil)</option>
-                      <option value="57">+57 (Colombia)</option>
-                      <option value="58">+58 (Venezuela)</option>
-                      <option value="503">+503 (El Salvador)</option>
-                      <option value="504">+504 (Honduras)</option>
-                      <option value="505">+505 (Nicaragua)</option>
-                      <option value="506">+506 (Costa Rica)</option>
-                      <option value="507">+507 (Panama)</option>
-                      <option value="508">+508 (Republica Dominicana)</option>
-                      <option value="509">+509 (Haiti)</option>
-                      <option value="591">+591 (Bolivia)</option>
-                      <option value="593">+593 (Ecuador)</option>
-                      <option value="595">+595 (Paraguay)</option>
-                      <option value="598">+598 (Uruguay)</option>
-                      <option value="599">+599 (Curazao)</option>
-                    </select>
-                    <input 
-                    type="number" 
-                    className="form-control"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="15512345678"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="phone_number" className="block font-medium text-[#333] mb-1">Teléfono</label>
+                    <div className="flex flex-row gap-2.5 w-full">
+                      <select className="w-[35%] md:w-[30%] text-sm md:text-base text-black rounded-lg border border-white bg-[#ddd] p-1.5 md:p-2.5 outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff] truncate">
+                        <option value="">Sel...</option>
+                        <option value="1">+1 (US)</option>
+                        <option value="1">+1 (CA)</option>
+                        <option value="34">+34 (ES)</option>
+                        <option value="51">+51 (PE)</option>
+                        <option value="52">+52 (MX)</option>
+                        <option value="53">+53 (CU)</option>
+                        <option value="54">+54 (AR)</option>
+                        <option value="55">+55 (BR)</option>
+                        <option value="57">+57 (CO)</option>
+                        <option value="58">+58 (VE)</option>
+                        <option value="503">+503 (SV)</option>
+                        <option value="504">+504 (HN)</option>
+                        <option value="505">+505 (NI)</option>
+                        <option value="506">+506 (CR)</option>
+                        <option value="507">+507 (PA)</option>
+                        <option value="508">+508 (DO)</option>
+                        <option value="509">+509 (HT)</option>
+                        <option value="591">+591 (BO)</option>
+                        <option value="593">+593 (EC)</option>
+                        <option value="595">+595 (PY)</option>
+                        <option value="598">+598 (UY)</option>
+                        <option value="599">+599 (CW)</option>
+                      </select>
+                      <input 
+                        type="number" 
+                        className="w-[65%] md:w-[70%] rounded-lg border border-white bg-[#ddd] p-1.5 md:p-2.5 text-sm md:text-base outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        id="phone_number"
+                        value={formData.phone_number}
+                        onChange={handleInputChange}
+                        placeholder="15512345678"
+                      />
+                    </div>
                   </div>
-                  </div>
-                  <div className="col-md-6">
-                    <label htmlFor="address" className="form-label">Dirección</label>
+                  <div>
+                    <label htmlFor="address" className="block font-medium text-[#333] mb-1">Dirección</label>
                     <input 
                       type="text" 
-                      className="form-control" 
+                      className="w-full rounded-lg border border-white bg-[#ddd] p-1.5 md:p-2.5 text-sm md:text-base outline-none focus:outline-none focus:ring-[1px] focus:ring-[#007bff] focus:border-[#007bff]" 
                       id="address"
                       value={formData.address}
                       onChange={handleInputChange}
@@ -398,8 +386,8 @@ const Usuarios = () => {
                   </div>
                 </div>
 
-                <div className="d-grid gap-2">
-                  <button type="submit" className="btn btn-primary">
+                <div className="w-full mt-2 sm:mt-5">
+                  <button type="submit" className="w-full bg-[#2c2c2c] text-white font-bold py-3 rounded-lg flex justify-center items-center hover:opacity-90 transition-opacity">
                     {editingUserId ? 'Guardar Cambios' : 'Guardar Usuario'}
                   </button>
                 </div>
@@ -407,7 +395,7 @@ const Usuarios = () => {
             </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

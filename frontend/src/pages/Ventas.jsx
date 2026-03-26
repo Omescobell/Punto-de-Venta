@@ -4,8 +4,8 @@ import Navbar from "../components/layout/Navbar";
 import SearchBar from "../components/layout/SearchBar";
 import ActionButtons from "../components/common/ActionButtons"; // Using for Trash Icon
 import LoadingModal from "../components/common/LoadingModal";
+// We leave Ventas.css just for the Custom SVG animations used by LoadingModal inside it
 import "../styles/Ventas.css";
-import "../styles/General.css";
 
 const Ventas = () => {
   // UI State
@@ -183,9 +183,6 @@ const Ventas = () => {
 
       if (response.ok) {
         alert("Pago procesado correctamente. Venta finalizada.");
-        // Reset Logic
-        // setCart([]); // Removed reset here to keep data for ticket
-        // setCreatedOrder(null);
         setSelectedCustomerId("");
         setPaymentAmount("");
 
@@ -224,8 +221,8 @@ const Ventas = () => {
     <>
       <Navbar activeItem="Ventas" />
 
-      <div className="Main-Container">
-        <div className="Tools_Container">
+      <div className="flex flex-col w-full px-[5%] pb-[5%]">
+        <div className="flex flex-row items-center justify-center gap-[20px] mb-[30px] w-full">
           <SearchBar
             placeholder="Buscar Producto (Nombre o SKU)"
             value={searchTerm}
@@ -233,17 +230,17 @@ const Ventas = () => {
           />
         </div>
 
-        <div className="Gp">
-          <div className="row flscn">
+        <div>
+          <div className="flex flex-col lg:flex-row justify-between h-[80vh] w-full gap-5">
             {/* Left Column: Cart & Customer */}
-            <div className="Client_Container col-8">
-              <div className="d-flex flex-column h-100 gap-3">
+            <div className="w-full lg:w-2/3 flex flex-col h-full p-2.5">
+              <div className="flex flex-col h-full gap-3">
                 {/* Cliente Selector */}
-                <div className="Client_bar">
+                <div className="bg-white w-full rounded-xl p-2.5 flex items-center justify-center flex-row shadow-sm">
                   <select
                     name="Client"
                     id="Client"
-                    className="form-select w-50"
+                    className="w-[50%] p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={selectedCustomerId}
                     onChange={(e) => setSelectedCustomerId(e.target.value)}
                   >
@@ -257,32 +254,28 @@ const Ventas = () => {
                 </div>
 
                 {/* Product List */}
-                <div className="Product_List_Container ">
-                  <div className="Product_List h-100">
+                <div className="bg-white w-full flex-grow overflow-y-auto rounded-xl p-2.5 shadow-sm">
+                  <div className="bg-white h-full w-full rounded-xl p-2.5 text-[#666]">
                     {loading ? (
-                      <p className="text-center">Cargando productos...</p>
+                      <p className="text-center text-gray-500">Cargando productos...</p>
                     ) : (
-                      <div className="row g-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredProducts.map((product) => (
-                          <div className="col-12" key={product.id}>
+                          <div className="col-span-1" key={product.id}>
                             <div
-                              className="card h-100 p-2 product-card"
-                              style={{
-                                cursor: "pointer",
-                                border: "1px solid #ddd",
-                              }}
+                              className="bg-white rounded-xl p-4 border border-[#ddd] cursor-pointer hover:shadow-md transition-shadow h-full flex flex-col justify-center"
                               onClick={() => addToCart(product)}
                             >
-                              <div className="d-flex justify-content-between">
-                                <strong>{product.name}</strong>
-                                <span className="text-success fw-bold">
+                              <div className="flex flex-row justify-between items-center mb-1">
+                                <strong className="text-gray-800 text-lg line-clamp-1" title={product.name}>{product.name}</strong>
+                                <span className="text-[#1eb35b] font-bold text-lg whitespace-nowrap">
                                   $
                                   {parseFloat(
                                     product.final_price || product.price,
                                   ).toFixed(2)}
                                 </span>
                               </div>
-                              <small className="text-muted">
+                              <small className="text-gray-500">
                                 Stock:{" "}
                                 {product.available_to_sell ?? product.current_stock}
                               </small>
@@ -297,49 +290,47 @@ const Ventas = () => {
             </div>
 
             {/* Right Column: Product Selector */}
-            <div className="Product_Container col-4">
-              <div className="Cart_Container">
+            <div className="w-full lg:w-1/3 bg-[#f9f9f9] border-l border-[#eee] flex flex-col h-full p-4 rounded-xl shadow-sm">
+              <div className="flex flex-col flex-grow overflow-hidden border border-[#ddd] rounded-xl bg-white">
                 {/* Cart Items List */}
-                <div className="Cart_List">
+                <div className="flex-1 overflow-y-auto p-2.5 bg-white rounded-t-xl">
                   {cart.length === 0 ? (
-                    <p className="text-center text-muted mt-5">Carrito Vacío</p>
+                    <p className="text-center text-gray-400 mt-10">Carrito Vacío</p>
                   ) : (
-                    <table className="table">
+                    <table className="w-full text-left">
                       <thead>
-                        <tr>
-                          <th>Producto</th>
-                          <th>Cant.</th>
-                          <th>Precio</th>
-                          <th>Total</th>
-                          <th></th>
+                        <tr className="border-b border-gray-200">
+                          <th className="p-2 font-medium text-gray-600">Producto</th>
+                          <th className="p-2 font-medium text-gray-600 text-center">Cant.</th>
+                          <th className="p-2 font-medium text-gray-600 text-right">Total</th>
+                          <th className="p-2"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {cart.map((item) => (
-                          <tr key={item.product.id}>
-                            <td>{item.product.name}</td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-outline-secondary me-1 sm-btn"
-                                onClick={() => updateQuantity(item.product.id, -1)}
-                              >
-                                -
-                              </button>
-                              {item.quantity}
-                              <button
-                                className="btn btn-sm btn-outline-secondary ms-1 sm-btn"
-                                onClick={() => updateQuantity(item.product.id, 1)}
-                              >
-                                +
-                              </button>
+                          <tr key={item.product.id} className="border-b border-gray-100 last:border-none">
+                            <td className="p-2 text-gray-800 font-medium">
+                              {item.product.name}
+                              <div className="text-sm text-gray-500">${parseFloat(item.product.final_price || item.product.price).toFixed(2)} c/u</div>
                             </td>
-                            <td>
-                              $
-                              {parseFloat(
-                                item.product.final_price || item.product.price,
-                              ).toFixed(2)}
+                            <td className="p-2">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                  onClick={() => updateQuantity(item.product.id, -1)}
+                                >
+                                  -
+                                </button>
+                                <span className="w-6 text-center">{item.quantity}</span>
+                                <button
+                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                  onClick={() => updateQuantity(item.product.id, 1)}
+                                >
+                                  +
+                                </button>
+                              </div>
                             </td>
-                            <td>
+                            <td className="p-2 text-right text-gray-800 font-semibold">
                               $
                               {(
                                 parseFloat(
@@ -347,9 +338,9 @@ const Ventas = () => {
                                 ) * item.quantity
                               ).toFixed(2)}
                             </td>
-                            <td>
+                            <td className="p-2 text-right">
                               <button
-                                className="btn btn-danger md-btn"
+                                className="w-[40px] h-[40px] bg-red-500 text-white rounded-lg flex justify-center items-center hover:bg-red-600 transition-colors shadow-sm"
                                 onClick={() => removeFromCart(item.product.id)}
                               >
                                 <i className="bi bi-trash"></i>
@@ -362,17 +353,18 @@ const Ventas = () => {
                   )}
                 </div>
                 {/* Totals Area */}
-                <div className="Cart_Total">
-                  <h3>Total Estimado: ${calculateLocalTotal().toFixed(2)}</h3>
+                <div className="p-4 bg-[#f0f0f0] border-t border-[#ddd] rounded-b-xl flex justify-between items-center">
+                  <h3 className="m-0 text-xl font-bold text-gray-800">Total Estimado:</h3>
+                  <h3 className="m-0 text-xl font-bold text-[#1eb35b]">${calculateLocalTotal().toFixed(2)}</h3>
                 </div>
               </div>
               {/* Pay Button */}
               <button
-                className="button_add w-100 mt-3"
+                className="bg-[#1eb35b] text-white border-none rounded-xl p-4 text-[1.8rem] w-full flex items-center justify-center gap-2.5 transition-transform hover:scale-[1.02] hover:bg-[#17964b] mt-4 shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleInitiatePayment}
                 disabled={cart.length === 0}
               >
-                <i className="bi bi-currency-dollar"></i> Cobrar
+                <i className="bi bi-currency-dollar text-[2.2rem]"></i> Cobrar
               </button>
             </div>
           </div>
@@ -380,142 +372,122 @@ const Ventas = () => {
       </div>
 
       {/* Pay Method Selection Modal */}
-      <div
-        className={`modal fade ${showPayModal ? "show" : ""}`}
-        style={{
-          display: showPayModal ? "block" : "none",
-          backgroundColor: "rgba(0,0,0,0.5)",
-        }}
-        tabIndex="-1"
-      >
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content Custom-Modal-Style">
-            <div className="modal-body">
-              <h2 className="text-center mb-4">
-                Total a Pagar: $
-                {createdOrder ? createdOrder.final_amount : "0.00"}
-              </h2>
-              <h5 className="text-center mb-5 text-muted">
-                Seleccione Método de Pago
-              </h5>
+      {showPayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity" tabIndex="-1">
+          <div className="w-[500px] max-w-[90%] mx-auto relative bg-[#a8a8a8] rounded-xl p-8 shadow-2xl">
+            <h2 className="text-center font-bold text-gray-800 text-3xl mb-4">
+              Total a Pagar: ${createdOrder ? createdOrder.final_amount : "0.00"}
+            </h2>
+            <h5 className="text-center mb-8 text-gray-600 text-lg">
+              Seleccione Método de Pago
+            </h5>
 
-              <div className="row text-center justify-content-center g-3">
-                <div className="col-4">
-                  <button
-                    className="Invs_btn w-100"
-                    onClick={() => {
-                      setShowPayModal(false);
-                      setShowCashModal(true);
-                    }}
-                  >
-                    <i className="bi bi-cash-coin fs-1"></i>
-                    <h4>Efectivo</h4>
-                  </button>
-                </div>
-                <div className="col-4">
-                  <button
-                    className="Invs_btn w-100"
-                    onClick={() => handleProcessPayment("CARD")}
-                  >
-                    <i className="bi bi-credit-card fs-1"></i>
-                    <h4>Tarjeta</h4>
-                  </button>
-                </div>
-                {/* Only show credit/points if customer is selected, optionally */}
-                <div className="col-4">
-                  <button
-                    className="Invs_btn w-100"
-                    onClick={() => handleProcessPayment("CREDIT")}
-                  >
-                    <i className="bi bi-bank fs-1"></i>
-                    <h4>Crédito</h4>
-                  </button>
-                </div>
-              </div>
-              <div className="row mt-3">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-1">
                 <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowPayModal(false)}
+                  className="bg-transparent border-none p-4 w-full cursor-pointer transition-all text-[#444] hover:scale-110 hover:text-[#1eb35b] flex flex-col items-center justify-center group"
+                  onClick={() => {
+                    setShowPayModal(false);
+                    setShowCashModal(true);
+                  }}
                 >
-                  Cancelar
+                  <i className="bi bi-cash-coin text-[4rem] mb-2 group-hover:text-[#1eb35b]"></i>
+                  <h4 className="font-medium text-lg m-0">Efectivo</h4>
+                </button>
+              </div>
+              <div className="col-span-1">
+                <button
+                  className="bg-transparent border-none p-4 w-full cursor-pointer transition-all text-[#444] hover:scale-110 hover:text-[#1eb35b] flex flex-col items-center justify-center group"
+                  onClick={() => handleProcessPayment("CARD")}
+                >
+                  <i className="bi bi-credit-card text-[4rem] mb-2 group-hover:text-[#1eb35b]"></i>
+                  <h4 className="font-medium text-lg m-0">Tarjeta</h4>
+                </button>
+              </div>
+              <div className="col-span-1">
+                <button
+                  className="bg-transparent border-none p-4 w-full cursor-pointer transition-all text-[#444] hover:scale-110 hover:text-[#1eb35b] flex flex-col items-center justify-center group"
+                  onClick={() => handleProcessPayment("CREDIT")}
+                >
+                  <i className="bi bi-bank text-[4rem] mb-2 group-hover:text-[#1eb35b]"></i>
+                  <h4 className="font-medium text-lg m-0">Crédito</h4>
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Cash Payment Modal */}
-      <div
-        className={`modal fade ${showCashModal ? "show" : ""}`}
-        style={{
-          display: showCashModal ? "block" : "none",
-          backgroundColor: "rgba(0,0,0,0.5)",
-        }}
-        tabIndex="-1"
-      >
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content Custom-Modal-Style">
-            <div className="modal-body">
-              <h2 className="text-center">Pago en Efectivo</h2>
-              <h3 className="text-center Text_Total my-4">
-                Total: ${createdOrder ? createdOrder.final_amount : "0.00"}
-              </h3>
-
-              <form
-                className="text-center"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleProcessPayment("CASH");
-                }}
+            <div className="flex justify-center mt-6">
+              <button
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                onClick={() => setShowPayModal(false)}
               >
-                <h5>Monto Recibido</h5>
-                <input
-                  type="number"
-                  className="form-control mb-3 text-center"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="0.00"
-                />
-
-                {paymentAmount &&
-                  createdOrder &&
-                  parseFloat(paymentAmount) >=
-                    parseFloat(createdOrder.final_amount) && (
-                    <div className="alert alert-success">
-                      Cambio: $
-                      {(
-                        parseFloat(paymentAmount) -
-                        parseFloat(createdOrder.final_amount)
-                      ).toFixed(2)}
-                    </div>
-                  )}
-
-                <div className="d-grid gap-2">
-                  <button
-                    type="submit"
-                    className="btn btn-success btn-lg"
-                    disabled={
-                      !paymentAmount ||
-                      parseFloat(paymentAmount) <
-                        parseFloat(createdOrder?.final_amount || 0)
-                    }
-                  >
-                    Confirmar Pago
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowCashModal(false)}
-                  >
-                    Regresar
-                  </button>
-                </div>
-              </form>
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Cash Payment Modal */}
+      {showCashModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity" tabIndex="-1">
+          <div className="w-[450px] max-w-[90%] mx-auto relative bg-[#a8a8a8] rounded-xl p-8 shadow-2xl">
+            <h2 className="text-center font-bold text-gray-800 text-3xl mb-4">Pago en Efectivo</h2>
+            <h3 className="text-center font-medium text-[#555] text-2xl my-6">
+              Total: ${createdOrder ? createdOrder.final_amount : "0.00"}
+            </h3>
+
+            <form
+              className="text-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleProcessPayment("CASH");
+              }}
+            >
+              <h5 className="text-gray-700 font-medium mb-2">Monto Recibido</h5>
+              <input
+                type="number"
+                className="w-[80%] mx-auto block rounded-lg border border-gray-300 bg-white p-3 text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+              />
+
+              {paymentAmount &&
+                createdOrder &&
+                parseFloat(paymentAmount) >=
+                  parseFloat(createdOrder.final_amount) && (
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-6 text-lg font-medium">
+                    Cambio: $
+                    {(
+                      parseFloat(paymentAmount) -
+                      parseFloat(createdOrder.final_amount)
+                    ).toFixed(2)}
+                  </div>
+                )}
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  className="w-full bg-[#1eb35b] text-white font-bold py-3 text-xl rounded-lg hover:bg-[#17964b] transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={
+                    !paymentAmount ||
+                    parseFloat(paymentAmount) <
+                      parseFloat(createdOrder?.final_amount || 0)
+                  }
+                >
+                  Confirmar Pago
+                </button>
+                <button
+                  type="button"
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 text-xl rounded-lg transition-colors shadow-md"
+                  onClick={() => setShowCashModal(false)}
+                >
+                  Regresar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Loading Modal */}
       <LoadingModal show={showLoadingModal} onHide={() => {}} />
