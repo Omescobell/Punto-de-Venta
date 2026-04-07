@@ -240,7 +240,7 @@ const Ventas = () => {
                   <select
                     name="Client"
                     id="Client"
-                    className="w-[50%] p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-[50%] h-8 p-2 rounded-lg border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-grey-100"
                     value={selectedCustomerId}
                     onChange={(e) => setSelectedCustomerId(e.target.value)}
                   >
@@ -316,14 +316,14 @@ const Ventas = () => {
                             <td className="p-2">
                               <div className="flex items-center justify-center gap-2">
                                 <button
-                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-100 hover:bg-gray-400 transition-colors"
                                   onClick={() => updateQuantity(item.product.id, -1)}
                                 >
                                   -
                                 </button>
                                 <span className="w-6 text-center">{item.quantity}</span>
                                 <button
-                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                  className="w-[30px] h-[30px] rounded-full border border-gray-300 flex items-center justify-center text-gray-100 hover:bg-white-400 transition-colors"
                                   onClick={() => updateQuantity(item.product.id, 1)}
                                 >
                                   +
@@ -445,7 +445,7 @@ const Ventas = () => {
               <h5 className="text-gray-700 font-medium mb-2">Monto Recibido</h5>
               <input
                 type="number"
-                className="w-[80%] mx-auto block rounded-lg border border-gray-300 bg-white p-3 text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
+                className="w-[80%] mx-auto block rounded-lg border text-black border-gray-300 bg-white p-3 text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 placeholder="0.00"
