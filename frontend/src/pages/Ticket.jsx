@@ -53,6 +53,51 @@ const Ticket = () => {
     window.print();
   };
 
+  const handleSendTelegram = async () => {
+    // Estas variables deben venir de tu archivo .env o configuración
+    // Ejemplo en .env: VITE_TELEGRAM_BOT_TOKEN="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "TU_BOT_TOKEN_AQUI";
+    const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID || "TU_CHAT_ID_AQUI";
+
+    if (botToken === "TU_BOT_TOKEN_AQUI" || chatId === "TU_CHAT_ID_AQUI") {
+      alert("Por favor, configura tu Bot Token y Chat ID de Telegram en el código o en tus variables de entorno (.env).");
+      return;
+    }
+
+    const text = `🧾 *TICKET DE VENTA*
+*Orden:* #${order.id}
+*Fecha:* ${new Date().toLocaleString()}
+*Cliente:* ${order.customer_name || "Cliente Visitante"}
+-----------------------------------
+${items.map(i => `${i.quantity}x ${i.product.name} - $${(parseFloat(i.product.final_price || i.product.price) * i.quantity).toFixed(2)}`).join('\n')}
+-----------------------------------
+*Total:* $${parseFloat(order.final_amount).toFixed(2)}
+*Método:* ${paymentMethod === 'CASH' ? 'Efectivo' : paymentMethod === 'CARD' ? 'Tarjeta' : 'Crédito'}`;
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text,
+          parse_mode: "Markdown"
+        })
+      });
+
+      if (response.ok) {
+        alert("Ticket enviado por Telegram correctamente.");
+      } else {
+        const data = await response.json();
+        console.error("Error de Telegram:", data);
+        alert("Hubo un error al enviar el ticket a Telegram.");
+      }
+    } catch (error) {
+      console.error("Error de red:", error);
+      alert("Error de conexión al intentar enviar el ticket.");
+    }
+  };
+
   return (
     <>
       <Navbar activeItem="Ventas" />
@@ -118,13 +163,18 @@ const Ticket = () => {
               </div>
             </div>
 
-            <div className="d-flex justify-content-between mt-5 no-print">
+            <div className="d-flex justify-content-between mt-5 no-print gap-2 flex-wrap">
               <button className="btn btn-secondary" onClick={() => navigate("/ventas")}>
                 Nueva Venta
               </button>
-              <button className="btn btn-primary" onClick={handlePrint}>
-                <i className="bi bi-printer me-2"></i>Imprimir Ticket
-              </button>
+              <div className="d-flex gap-2">
+                <button className="btn btn-info text-white" onClick={handleSendTelegram}>
+                  <i className="bi bi-telegram me-2"></i>Enviar Telegram
+                </button>
+                <button className="btn btn-primary" onClick={handlePrint}>
+                  <i className="bi bi-printer me-2"></i>Imprimir Ticket
+                </button>
+              </div>
             </div>
           </div>
         </div>

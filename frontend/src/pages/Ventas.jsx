@@ -182,7 +182,6 @@ const Ventas = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Pago procesado correctamente. Venta finalizada.");
         setSelectedCustomerId("");
         setPaymentAmount("");
 
