@@ -54,13 +54,21 @@ const Ticket = () => {
   };
 
   const handleSendTelegram = async () => {
-    // Estas variables deben venir de tu archivo .env o configuración
-    // Ejemplo en .env: VITE_TELEGRAM_BOT_TOKEN="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "TU_BOT_TOKEN_AQUI";
-    const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID || "TU_CHAT_ID_AQUI";
+    // Solo necesitamos el Token del Bot desde el .env
+    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 
-    if (botToken === "TU_BOT_TOKEN_AQUI" || chatId === "TU_CHAT_ID_AQUI") {
-      alert("Por favor, configura tu Bot Token y Chat ID de Telegram en el código o en tus variables de entorno (.env).");
+    if (!botToken) {
+      alert("Por favor, configura tu Bot Token de Telegram en tu archivo .env (VITE_TELEGRAM_BOT_TOKEN).");
+      return;
+    }
+
+    // Preguntamos al cajero el ID del cliente
+    const customerChatId = window.prompt(
+      "Ingresa el Chat ID de Telegram del cliente para enviarle su ticket:\n\n(El cliente puede obtenerlo desde Telegram enviando un mensaje al bot @getmyid_bot)"
+    );
+
+    // Si el cajero cancela o lo deja vacío, detenemos el envío
+    if (!customerChatId || customerChatId.trim() === "") {
       return;
     }
 
@@ -79,18 +87,18 @@ ${items.map(i => `${i.quantity}x ${i.product.name} - $${(parseFloat(i.product.fi
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: chatId,
+          chat_id: customerChatId.trim(),
           text: text,
           parse_mode: "Markdown"
         })
       });
 
       if (response.ok) {
-        alert("Ticket enviado por Telegram correctamente.");
+        alert("Ticket enviado exitosamente por Telegram al cliente.");
       } else {
         const data = await response.json();
         console.error("Error de Telegram:", data);
-        alert("Hubo un error al enviar el ticket a Telegram.");
+        alert(`Hubo un error al enviar el ticket: ${data.description || 'Verifica que el Chat ID sea correcto y que el cliente haya iniciado chat con el bot.'}`);
       }
     } catch (error) {
       console.error("Error de red:", error);
