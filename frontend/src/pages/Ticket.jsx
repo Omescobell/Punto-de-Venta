@@ -1,12 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import "../styles/General.css";
 import "../styles/Ticket.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 const Ticket = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // --- Estado del modal de email ---
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null); // { type: 'success'|'error', msg: string }
 
   // Datos de prueba para previsualización
   const dummyData = {
@@ -27,7 +35,6 @@ const Ticket = () => {
 
   useEffect(() => {
     if (order && items) {
-      // Small delay to ensure styles and data are loaded
       const timer = setTimeout(() => {
         window.print();
       }, 1000);
@@ -53,56 +60,47 @@ const Ticket = () => {
     window.print();
   };
 
-  const handleSendTelegram = async () => {
-    // Solo necesitamos el Token del Bot desde el .env
-    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+  // --- Lógica de envío de email ---
+  const openEmailModal = () => {
+    setEmailInput('');
+    setEmailStatus(null);
+    setShowEmailModal(true);
+  };
 
-    if (!botToken) {
-      alert("Por favor, configura tu Bot Token de Telegram en tu archivo .env (VITE_TELEGRAM_BOT_TOKEN).");
-      return;
-    }
+  const closeEmailModal = () => {
+    setShowEmailModal(false);
+    setEmailStatus(null);
+  };
 
-    // Preguntamos al cajero el ID del cliente
-    const customerChatId = window.prompt(
-      "Ingresa el Chat ID de Telegram del cliente para enviarle su ticket:\n\n(El cliente puede obtenerlo desde Telegram enviando un mensaje al bot @getmyid_bot)"
-    );
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!emailInput.trim()) return;
 
-    // Si el cajero cancela o lo deja vacío, detenemos el envío
-    if (!customerChatId || customerChatId.trim() === "") {
-      return;
-    }
-
-    const text = `🧾 *TICKET DE VENTA*
-*Orden:* #${order.id}
-*Fecha:* ${new Date().toLocaleString()}
-*Cliente:* ${order.customer_name || "Cliente Visitante"}
------------------------------------
-${items.map(i => `${i.quantity}x ${i.product.name} - $${(parseFloat(i.product.final_price || i.product.price) * i.quantity).toFixed(2)}`).join('\n')}
------------------------------------
-*Total:* $${parseFloat(order.final_amount).toFixed(2)}
-*Método:* ${paymentMethod === 'CASH' ? 'Efectivo' : paymentMethod === 'CARD' ? 'Tarjeta' : 'Crédito'}`;
+    setEmailSending(true);
+    setEmailStatus(null);
 
     try {
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: customerChatId.trim(),
-          text: text,
-          parse_mode: "Markdown"
-        })
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE}/api/orders/${order.id}/send-email/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ email: emailInput.trim() }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        alert("Ticket enviado exitosamente por Telegram al cliente.");
+        setEmailStatus({ type: 'success', msg: data.detail || 'Ticket enviado exitosamente.' });
       } else {
-        const data = await response.json();
-        console.error("Error de Telegram:", data);
-        alert(`Hubo un error al enviar el ticket: ${data.description || 'Verifica que el Chat ID sea correcto y que el cliente haya iniciado chat con el bot.'}`);
+        setEmailStatus({ type: 'error', msg: data.error || 'Hubo un error al enviar el correo.' });
       }
-    } catch (error) {
-      console.error("Error de red:", error);
-      alert("Error de conexión al intentar enviar el ticket.");
+    } catch (err) {
+      setEmailStatus({ type: 'error', msg: 'Error de conexión. Verifica tu red e inténtalo de nuevo.' });
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -176,8 +174,8 @@ ${items.map(i => `${i.quantity}x ${i.product.name} - $${(parseFloat(i.product.fi
                 Nueva Venta
               </button>
               <div className="d-flex gap-2">
-                <button className="btn btn-info text-white" onClick={handleSendTelegram}>
-                  <i className="bi bi-telegram me-2"></i>Enviar Telegram
+                <button className="btn btn-success text-white" onClick={openEmailModal} id="btn-enviar-email">
+                  <i className="bi bi-envelope-fill me-2"></i>Enviar por Correo
                 </button>
                 <button className="btn btn-primary" onClick={handlePrint}>
                   <i className="bi bi-printer me-2"></i>Imprimir Ticket
@@ -188,7 +186,102 @@ ${items.map(i => `${i.quantity}x ${i.product.name} - $${(parseFloat(i.product.fi
         </div>
       </div>
 
-      
+      {/* ===== Modal de Envío por Correo ===== */}
+      {showEmailModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          role="dialog"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeEmailModal(); }}
+        >
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content shadow-lg" style={{ borderRadius: '14px', overflow: 'hidden' }}>
+
+              {/* Header */}
+              <div className="modal-header" style={{ background: '#1a1a2e', color: '#fff', border: 'none' }}>
+                <h5 className="modal-title d-flex align-items-center gap-2" id="email-modal-title">
+                  <i className="bi bi-envelope-fill"></i>
+                  Enviar Ticket por Correo
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Cerrar"
+                  onClick={closeEmailModal}
+                  disabled={emailSending}
+                ></button>
+              </div>
+
+              {/* Body */}
+              <div className="modal-body p-4">
+                <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
+                  Ingresa el correo electrónico del cliente para enviarle una copia del ticket de la orden <strong>#{order.id}</strong>.
+                </p>
+
+                <form onSubmit={handleSendEmail} id="form-enviar-email">
+                  <div className="mb-3">
+                    <label htmlFor="email-cliente-input" className="form-label fw-semibold">
+                      <i className="bi bi-at me-1"></i>Correo del cliente
+                    </label>
+                    <input
+                      type="email"
+                      id="email-cliente-input"
+                      className="form-control form-control-lg"
+                      placeholder="cliente@ejemplo.com"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      required
+                      disabled={emailSending}
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Feedback de estado */}
+                  {emailStatus && (
+                    <div className={`alert alert-${emailStatus.type === 'success' ? 'success' : 'danger'} d-flex align-items-center gap-2 py-2`}>
+                      <i className={`bi ${emailStatus.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'}`}></i>
+                      {emailStatus.msg}
+                    </div>
+                  )}
+                </form>
+              </div>
+
+              {/* Footer */}
+              <div className="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={closeEmailModal}
+                  disabled={emailSending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="form-enviar-email"
+                  className="btn btn-success d-flex align-items-center gap-2"
+                  disabled={emailSending || !emailInput.trim()}
+                  id="btn-confirmar-envio-email"
+                >
+                  {emailSending ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-send-fill"></i>
+                      Enviar Ticket
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
