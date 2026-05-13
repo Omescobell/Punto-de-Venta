@@ -263,17 +263,6 @@ class DateValidationService:
         date_field='created_at', 
         entity_name='registros'
     ):
-        """
-        Valida fechas dinámicamente para cualquier QuerySet.
-        
-        :param queryset: QuerySet de Django sobre el cual validar.
-        :param start_date_str: Fecha inicial en string (YYYY-MM-DD).
-        :param end_date_str: Fecha final en string (YYYY-MM-DD).
-        :param date_field: Nombre del campo de fecha en el modelo (default: 'created_at').
-        :param entity_name: Nombre de los datos para los messages de error (default: 'registros').
-        :return: (start_date, end_date, dict_error_si_hubo)
-        """
-        
         boundaries = queryset.aggregate(
             first_record=Min(date_field),
             last_record=Max(date_field)
@@ -282,8 +271,8 @@ class DateValidationService:
         if not boundaries['first_record']:
             return None, None, {"error": f"No hay {entity_name} en el sistema aún."}
             
-        system_first_date = timezone.localtime(boundaries['first_record']).date() if hasattr(boundaries['first_record'], 'date') else boundaries['first_record']
-        system_last_date = timezone.localtime(boundaries['last_record']).date() if hasattr(boundaries['last_record'], 'date') else boundaries['last_record']
+        system_first_date = timezone.localtime(boundaries['first_record']).date()
+        system_last_date = timezone.localtime(boundaries['last_record']).date()
 
         if start_date_str and end_date_str:
             try:
@@ -292,19 +281,18 @@ class DateValidationService:
             except ValueError:
                 return None, None, {"error": "Formato de fecha inválido. Usa YYYY-MM-DD."}
             
-            start_filter = {f"{date_field}__date": start_date}
-            end_filter = {f"{date_field}__date": end_date}
+            range_filter = {
+                f"{date_field}__date__gte": start_date,
+                f"{date_field}__date__lte": end_date
+            }
             
-            start_exists = queryset.filter(**start_filter).exists()
-            end_exists = queryset.filter(**end_filter).exists()
-            
-            if not start_exists or not end_exists:
-                invalid_date = start_date_str if not start_exists else end_date_str
+            if not queryset.filter(**range_filter).exists():
                 return None, None, {
-                    "error": f"La fecha {invalid_date} no tiene {entity_name} en el sistema.",
+                    "error": f"No se encontraron {entity_name} entre el {start_date_str} y el {end_date_str}.",
                     "first_system_record": system_first_date.strftime('%Y-%m-%d'),
                     "last_system_records": system_last_date.strftime('%Y-%m-%d')
                 }
+            
             return start_date, end_date, None
             
         else:
