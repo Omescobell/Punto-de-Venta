@@ -4,7 +4,8 @@ import Navbar from "../components/layout/Navbar";
 import "../styles/General.css";
 import "../styles/Ticket.css";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_BASE = import.meta.env.VITE_API_BASE || "";
+
 
 const Ticket = () => {
   const location = useLocation();
@@ -81,7 +82,7 @@ const Ticket = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${API_BASE}/api/orders/${order.id}/send-email/`, {
+      const response = await fetch(`/api/orders/${order.id}/send-email/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

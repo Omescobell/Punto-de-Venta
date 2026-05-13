@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Clientes.css';
+
 
 const Clientes = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +15,28 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   // Form State
   const initialFormState = {
@@ -86,9 +110,10 @@ const Clientes = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.first_name || !formData.last_name) {
-      alert('Nombre y Apellidos son obligatorios');
+      showNotify('warning', 'Nombre y Apellidos son obligatorios', 'Campos Requeridos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -109,26 +134,29 @@ const Clientes = () => {
       if (response.ok) {
         if (editingId) {
           setCustomers(prev => prev.map(c => c.id === editingId ? data : c));
-          alert('Cliente actualizado correctamente');
+          showNotify('success', 'Cliente actualizado correctamente', '¡Éxito!');
         } else {
           setCustomers(prev => [...prev, data]);
-          alert('Cliente agregado correctamente');
+          showNotify('success', 'Cliente agregado correctamente', '¡Éxito!');
         }
         setShowModal(false);
       } else {
         console.error('Error saving customer:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al guardar cliente';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este cliente?')) return;
+  const handleDelete = (id) => {
+    showNotify('confirm', '¿Está seguro de eliminar este cliente?', 'Eliminar Cliente', () => executeDelete(id));
+  };
 
+  const executeDelete = async (id) => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`/api/customers/${id}/`, {
@@ -140,14 +168,16 @@ const Clientes = () => {
 
       if (response.ok || response.status === 204) {
         setCustomers(prev => prev.filter(c => c.id !== id));
+        showNotify('success', 'Cliente eliminado correctamente', 'Eliminado');
       } else {
-        alert('Error al eliminar cliente');
+        showNotify('error', 'Error al eliminar cliente', 'Error');
       }
     } catch (err) {
       console.error('Error deleting customer:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
   };
+
 
   const filteredCustomers = customers.filter(customer => {
     const search = searchTerm.toLowerCase();
@@ -162,6 +192,15 @@ const Clientes = () => {
   return (
     <>
       <Navbar activeItem="Clientes" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
+
       
       <div className="Main-Container">
         <div className="Tools_Container">

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Promociones.css';
+
 
 const Promociones = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +16,28 @@ const Promociones = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   // Form State
   const initialPromoState = {
@@ -96,9 +120,10 @@ const Promociones = () => {
   const handlePromoSubmit = async (e) => {
     e.preventDefault();
     if (!promoData.name || !promoData.product || !promoData.discount_percent || !promoData.start_date || !promoData.end_date) {
-      alert('Por favor complete los campos obligatorios');
+      showNotify('warning', 'Por favor complete los campos obligatorios', 'Campos Requeridos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -117,21 +142,24 @@ const Promociones = () => {
         setPromotions(prev => [...prev, data]);
         setShowAddModal(false);
         setPromoData(initialPromoState);
-        alert('Promoción creada correctamente');
+        showNotify('success', 'Promoción creada correctamente', '¡Éxito!');
       } else {
         console.error('Error creating promotion:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al crear promoción';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar esta promoción?')) return;
+  const handleDelete = (id) => {
+    showNotify('confirm', '¿Está seguro de eliminar esta promoción?', 'Eliminar Promoción', () => executeDelete(id));
+  };
 
+  const executeDelete = async (id) => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`/api/promotions/${id}/`, {
@@ -143,23 +171,27 @@ const Promociones = () => {
 
       if (response.ok) {
         setPromotions(prev => prev.filter(p => p.id !== id));
+        showNotify('success', 'Promoción eliminada correctamente', 'Eliminado');
       } else {
         const data = await response.json();
-        alert(data.detail || 'Error al eliminar promoción');
+        showNotify('error', data.detail || 'Error al eliminar promoción', 'Error');
       }
     } catch (err) {
       console.error('Error deleting promotion:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
   };
+
 
   const handleBirthdaySubmit = (e) => {
     e.preventDefault();
     // Placeholder: No backend endpoint yet
     console.log('Birthday Config:', birthdayData);
     setShowBirthdayModal(false);
-    alert('Configuración guardada (Localmente)');
+    setShowBirthdayModal(false);
+    showNotify('info', 'Configuración guardada (Localmente)', 'Configuración');
   };
+
 
   const getProductName = (id) => {
     const product = products.find(p => p.id === id);
@@ -177,6 +209,15 @@ const Promociones = () => {
   return (
     <>
       <Navbar activeItem="Promociones" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
+
       
       <div className="Main-Container">
         <div className="Tools_Container">

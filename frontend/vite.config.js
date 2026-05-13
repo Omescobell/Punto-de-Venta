@@ -7,9 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://155.138.225.61',
+        target: 'https://obsidianpos.kozow.com',
         changeOrigin: true,
-        secure: false,        
+        secure: true,        
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
@@ -23,9 +23,9 @@ export default defineConfig({
         },
       },
       '/auth': {
-        target: 'http://155.138.225.61',
+        target: 'https://obsidianpos.kozow.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },

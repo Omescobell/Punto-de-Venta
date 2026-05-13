@@ -3,7 +3,9 @@ import Navbar from '../components/layout/Navbar';
 import SubHeader from '../components/layout/SubHeader';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Usuarios.css';
+
 import '../styles/General.css';
 
 const Chatbot = () => {
@@ -15,6 +17,28 @@ const Chatbot = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   // Form State
   const initialFormState = {
@@ -95,9 +119,10 @@ const Chatbot = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.employee_name || !formData.prefix || !formData.phone) {
-      alert('Por favor seleccione un empleado, prefijo e ingrese el teléfono');
+      showNotify('warning', 'Por favor seleccione un empleado, prefijo e ingrese el teléfono', 'Datos Incompletos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -121,21 +146,24 @@ const Chatbot = () => {
         setChatbotUsers(prev => [...prev, data]);
         setShowModal(false);
         setFormData(initialFormState);
-        alert('Usuario agregado a ChatBot correctamente');
+        showNotify('success', 'Usuario agregado a ChatBot correctamente', '¡Éxito!');
       } else {
         console.error('Error creating chatbot user:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al agregar usuario';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (mobile_number) => {
-    if (!window.confirm(`¿Está seguro de eliminar el número ${mobile_number} del chatbot?`)) return;
+  const handleDelete = (mobile_number) => {
+    showNotify('confirm', `¿Está seguro de eliminar el número ${mobile_number} del chatbot?`, 'Eliminar Usuario', () => executeDelete(mobile_number));
+  };
 
+  const executeDelete = async (mobile_number) => {
     try {
       const token = localStorage.getItem('access_token');
       // The endpoint uses mobile_number as ID
@@ -148,14 +176,16 @@ const Chatbot = () => {
 
       if (response.ok) {
         setChatbotUsers(prev => prev.filter(u => u.mobile_number !== mobile_number));
+        showNotify('success', 'Usuario eliminado correctamente', 'Eliminado');
       } else {
-        alert('Error al eliminar usuario');
+        showNotify('error', 'Error al eliminar usuario', 'Error');
       }
     } catch (err) {
       console.error('Error deleting chatbot user:', err);
-      alert('Error de conexión');
+      showNotify('error', 'Error de conexión', 'Error de Red');
     }
   };
+
 
   const filteredUsers = chatbotUsers.filter(user => {
     const search = searchTerm.toLowerCase();
@@ -168,6 +198,15 @@ const Chatbot = () => {
   return (
     <>
       <Navbar activeItem="Usuarios" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
+
       <SubHeader items={subHeaderItems} activeItem="ChatBot" />
       
       <div className="Main-Container">

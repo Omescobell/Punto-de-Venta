@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Usuarios.css'; // Reusing styles
+
 
 const Inventario = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +15,28 @@ const Inventario = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingProductId, setEditingProductId] = useState(null);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   const initialFormState = {
     sku: '',
@@ -98,9 +122,10 @@ const Inventario = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.sku || !formData.price || !formData.supplier) {
-      alert('Por favor complete los campos obligatorios');
+      showNotify('warning', 'Por favor complete los campos obligatorios', 'Campos Requeridos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -131,21 +156,24 @@ const Inventario = () => {
         setShowModal(false);
         setFormData(initialFormState);
         setEditingProductId(null);
-        alert(editingProductId ? 'Producto actualizado correctamente' : 'Producto creado correctamente');
+        showNotify('success', editingProductId ? 'Producto actualizado correctamente' : 'Producto creado correctamente', '¡Éxito!');
       } else {
         console.error('Error saving product:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al guardar producto';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión al guardar producto');
+      showNotify('error', 'Error de conexión al guardar producto', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este producto?')) return;
+  const handleDelete = (id) => {
+    showNotify('confirm', '¿Está seguro de eliminar este producto?', 'Eliminar Producto', () => executeDelete(id));
+  };
 
+  const executeDelete = async (id) => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`/api/products/${id}/`, {
@@ -157,15 +185,17 @@ const Inventario = () => {
 
       if (response.ok) {
         setProducts(prev => prev.filter(p => p.id !== id));
+        showNotify('success', 'Producto eliminado correctamente', 'Eliminado');
       } else {
         const data = await response.json();
-        alert(data.detail || 'Error al eliminar producto');
+        showNotify('error', data.detail || 'Error al eliminar producto', 'Error');
       }
     } catch (err) {
       console.error('Error deleting product:', err);
-      alert('Error de conexión al eliminar producto');
+      showNotify('error', 'Error de conexión al eliminar producto', 'Error de Red');
     }
   };
+
 
   const filteredProducts = products.filter(product => {
     const search = searchTerm.toLowerCase();
@@ -184,6 +214,15 @@ const Inventario = () => {
   return (
     <>
       <Navbar activeItem="Inventario" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
+
       
       <div className="Main-Container">
         <div className="Tools_Container">

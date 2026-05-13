@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Usuarios.css'; // Reusing styles
+
 
 const Proveedores = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,6 +13,28 @@ const Proveedores = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingSupplierId, setEditingSupplierId] = useState(null);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   const initialFormState = {
     contact_person: '',
@@ -87,9 +111,10 @@ const Proveedores = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.contact_person) {
-      alert('Por favor complete los campos obligatorios (Empresa, Contacto)');
+      showNotify('warning', 'Por favor complete los campos obligatorios (Empresa, Contacto)', 'Campos Requeridos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -112,21 +137,24 @@ const Proveedores = () => {
         setFormData(initialFormState);
         setEditingSupplierId(null);
         fetchSuppliers();
-        alert(editingSupplierId ? 'Proveedor actualizado correctamente' : 'Proveedor creado correctamente');
+        showNotify('success', editingSupplierId ? 'Proveedor actualizado correctamente' : 'Proveedor creado correctamente', '¡Éxito!');
       } else {
         console.error('Error saving supplier:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al guardar proveedor';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión al guardar proveedor');
+      showNotify('error', 'Error de conexión al guardar proveedor', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este proveedor?')) return;
+  const handleDelete = (id) => {
+    showNotify('confirm', '¿Está seguro de eliminar este proveedor?', 'Eliminar Proveedor', () => executeDelete(id));
+  };
 
+  const executeDelete = async (id) => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`/api/suppliers/${id}/`, {
@@ -138,15 +166,17 @@ const Proveedores = () => {
 
       if (response.ok) {
         fetchSuppliers();
+        showNotify('success', 'Proveedor eliminado correctamente', 'Eliminado');
       } else {
         const data = await response.json();
-        alert(data.detail || 'Error al eliminar proveedor');
+        showNotify('error', data.detail || 'Error al eliminar proveedor', 'Error');
       }
     } catch (err) {
       console.error('Error deleting supplier:', err);
-      alert('Error de conexión al eliminar proveedor');
+      showNotify('error', 'Error de conexión al eliminar proveedor', 'Error de Red');
     }
   };
+
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const search = searchTerm.toLowerCase();
@@ -160,6 +190,15 @@ const Proveedores = () => {
   return (
     <>
       <Navbar activeItem="Proveedores" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
+
       
       <div className="Main-Container">
         <div className="Tools_Container">

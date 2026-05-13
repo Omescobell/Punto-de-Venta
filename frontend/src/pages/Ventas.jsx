@@ -4,6 +4,8 @@ import Navbar from "../components/layout/Navbar";
 import SearchBar from "../components/layout/SearchBar";
 import ActionButtons from "../components/common/ActionButtons"; // Using for Trash Icon
 import LoadingModal from "../components/common/LoadingModal";
+import NotificationModal from "../components/common/NotificationModal";
+
 // We leave Ventas.css just for the Custom SVG animations used by LoadingModal inside it
 import "../styles/Ventas.css";
 
@@ -17,6 +19,14 @@ const Ventas = () => {
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [error, setError] = useState("");
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
 
   // Data State
   const [products, setProducts] = useState([]);
@@ -27,6 +37,21 @@ const Ventas = () => {
   const [cart, setCart] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [createdOrder, setCreatedOrder] = useState(null); // Stores the order response from backend
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
 
   const navigate = useNavigate();
 
@@ -110,9 +135,10 @@ const Ventas = () => {
   // --- Order Creation ---
   const handleInitiatePayment = async () => {
     if (cart.length === 0) {
-      alert("El carrito está vacío");
+      showNotify("warning", "El carrito está vacío", "Carrito Vacío");
       return;
     }
+
 
     setShowLoadingModal(true);
     const token = localStorage.getItem("access_token");
@@ -148,13 +174,15 @@ const Ventas = () => {
         let msg = "Error al crear la orden";
         if (data.non_field_errors) msg = data.non_field_errors.join("\n");
         else if (data.detail) msg = data.detail;
-        alert(msg);
+        showNotify("error", msg, "Error de Orden");
       }
+
     } catch (err) {
       setShowLoadingModal(false);
       console.error("Network error creating order:", err);
-      alert("Error de conexión al crear orden");
+      showNotify("error", "Error de conexión al crear orden", "Error de Red");
     }
+
   };
 
   // --- Payment Processing ---
@@ -200,12 +228,14 @@ const Ventas = () => {
         console.error("Payment failed:", data);
         let msg = "Error al procesar el pago";
         if (data.detail) msg = data.detail;
-        alert(msg);
+        showNotify("error", msg, "Error de Pago");
       }
+
     } catch (err) {
       console.error("Payment network error:", err);
-      alert("Error de conexión al pagar");
+      showNotify("error", "Error de conexión al pagar", "Error de Red");
     } finally {
+
       setShowLoadingModal(false);
     }
   };
@@ -219,6 +249,14 @@ const Ventas = () => {
   return (
     <>
       <Navbar activeItem="Ventas" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
 
       <div className="flex flex-col w-full px-[5%] pb-[5%]">
         <div className="flex flex-row items-center justify-center gap-[20px] mb-[30px] w-full">

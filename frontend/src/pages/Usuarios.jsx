@@ -3,7 +3,9 @@ import Navbar from '../components/layout/Navbar';
 import SubHeader from '../components/layout/SubHeader';
 import SearchBar from '../components/layout/SearchBar';
 import ActionButtons from '../components/common/ActionButtons';
+import NotificationModal from '../components/common/NotificationModal';
 import '../styles/Usuarios.css';
+
 
 const Usuarios = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +14,28 @@ const Usuarios = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingUserId, setEditingUserId] = useState(null);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const showNotify = (type, message, title = '', onConfirm = null) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeNotify = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }));
+  };
+
   
   // Initial form state
   const initialFormState = {
@@ -106,9 +130,10 @@ const Usuarios = () => {
 
     const missing = requiredFields.filter(field => !formData[field]);
     if (missing.length > 0) {
-      alert(`Por favor complete los campos obligatorios: ${missing.join(', ')}`);
+      showNotify('warning', `Por favor complete los campos obligatorios: ${missing.join(', ')}`, 'Campos Requeridos');
       return;
     }
+
 
     try {
       const token = localStorage.getItem('access_token');
@@ -138,22 +163,25 @@ const Usuarios = () => {
         setFormData(initialFormState);
         setEditingUserId(null);
         fetchUsers(); // Refresh list
-        alert(editingUserId ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
+        showNotify('success', editingUserId ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente', '¡Éxito!');
       } else {
         // Error handling
         console.error('Error saving user:', data);
         const errorMessage = Object.values(data).flat().join('\n') || 'Error al guardar usuario';
-        alert(errorMessage);
+        showNotify('error', errorMessage, 'Error');
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('Error de conexión al guardar usuario');
+      showNotify('error', 'Error de conexión al guardar usuario', 'Error de Red');
     }
+
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este usuario?')) return;
+  const handleDelete = (id) => {
+    showNotify('confirm', '¿Está seguro de eliminar este usuario?', 'Eliminar Usuario', () => executeDelete(id));
+  };
 
+  const executeDelete = async (id) => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`/api/users/${id}/`, {
@@ -165,15 +193,17 @@ const Usuarios = () => {
 
       if (response.ok) {
         fetchUsers(); // Refresh list
+        showNotify('success', 'Usuario eliminado correctamente', 'Eliminado');
       } else {
         const data = await response.json();
-        alert(data.detail || 'Error al eliminar usuario');
+        showNotify('error', data.detail || 'Error al eliminar usuario', 'Error');
       }
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert('Error de conexión al eliminar usuario');
+      showNotify('error', 'Error de conexión al eliminar usuario', 'Error de Red');
     }
   };
+
 
   // Filter users based on search term
   const filteredUsers = users.filter(user => {
@@ -185,7 +215,16 @@ const Usuarios = () => {
   return (
     <>
       <Navbar activeItem="Usuarios" />
+      <NotificationModal 
+        isOpen={notification.isOpen}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotify}
+        onConfirm={notification.onConfirm}
+      />
       <SubHeader items={subHeaderItems} activeItem="Usuarios" />
+
       
       <div className="Main-Container">
         <div className="Tools_Container">

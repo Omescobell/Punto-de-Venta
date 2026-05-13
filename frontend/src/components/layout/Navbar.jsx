@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
+import logo from '../../assets/LogoProv.svg';
+
 
 const Navbar = ({ activeItem }) => {
   const location = useLocation();
@@ -82,7 +84,9 @@ const Navbar = ({ activeItem }) => {
       {/* Top Bar: User Info & Logout */}
       <div className="flex flex-row justify-between items-center px-4 md:px-8 py-3 bg-[#f8f9fa] border-b border-gray-200">
         <div className="flex items-center gap-3">
+          <img src={logo} alt="Logo" className="h-8 md:h-10 w-auto" />
           {userType() && (
+
             <span className="bg-blue-100 text-blue-800 text-xs md:text-sm font-bold px-3 py-1 rounded-full border border-blue-200 tracking-wide uppercase">
               {userType()}
             </span>
@@ -103,7 +107,11 @@ const Navbar = ({ activeItem }) => {
       {/* Navigation Bar */}
       <nav className="px-4 md:px-8 py-3 md:py-4 bg-white transition-all duration-300">
         <div className="flex justify-between items-center lg:hidden">
-            <span className="text-lg font-bold text-gray-800 tracking-tight">Menú Principal</span>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="Logo" className="h-8 w-auto" />
+            <span className="text-lg font-bold text-gray-800 tracking-tight">Punto de Venta</span>
+          </div>
+
             {/* Hamburger Button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
