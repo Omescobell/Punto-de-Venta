@@ -143,11 +143,25 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         plain_message = strip_tags(html_message)
 
+        # Determinar la dirección remitente con fallbacks seguros
+        from_email = (
+            getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+            or getattr(settings, 'EMAIL_HOST_USER', None)
+            or ''
+        ).strip()
+
+        if not from_email:
+            return Response(
+                {'error': 'El servidor no tiene configurada una dirección de correo remitente. '
+                          'Contacta al administrador del sistema.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         try:
             send_mail(
                 subject=f'Tu ticket de compra - Orden #{order.id}',
                 message=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=from_email,
                 recipient_list=[recipient_email],
                 html_message=html_message,
                 fail_silently=False,
